@@ -3,6 +3,22 @@ import type { Logger } from "@zcode/contracts";
 import { resolveProcessProviderEndpointRoutingPort } from "../src/provider-endpoint-routing.js";
 
 describe("resolveProcessProviderEndpointRoutingPort", () => {
+  it.each([
+    "https://open.bigmodel.cn/api/anthropic/v1/messages",
+    "https://api.z.ai/api/anthropic/v1/messages",
+  ])("keeps the fork process default route direct for %s", async (url) => {
+    const port = resolveProcessProviderEndpointRoutingPort({
+      env: { ZCODE_ENV: "production", ZCODE_BASE_URL: "https://gateway.example.test" },
+      logger,
+      network: {},
+      sourceTitle: "electron",
+    });
+    await expect(port.resolve(url, { apiKeyId: "test-project-key-id" })).resolves.toEqual({
+      routed: false,
+      url,
+    });
+  });
+
   it("shares one process snapshot owner for the same endpoint and network policy", () => {
     const env = {
       ZCODE_ENV: "test",

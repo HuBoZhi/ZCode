@@ -2,7 +2,7 @@
 
 ## 状态
 
-- 本文是 ZCode CLI 模型 provider 端点转发的事实规范；动态路由与静态网关共用同一契约和调用链。
+- ZetaCode fork 当前默认策略为直连：`createProviderEndpointRoutingPort` 返回原 URL，规则和验收见 [fork 模型端点规范](../../../../../../specs/fork-model-endpoint-routing.md)。下文动态实现与静态网关描述可选实现的契约，不代表 fork 默认装配。
 - 能力只存在于 `apps/zcode-cli` 的默认 AI SDK provider transport，不修改用户 provider 配置、
   ZCode Protocol、Desktop/Web renderer 网络、WebFetch、MCP、OAuth、插件下载或 tool 子进程。
 - 受信 `custom` provider 自己持有 transport，不在透明转发范围内。
@@ -18,6 +18,7 @@ workflow 与 subagent 保留相同的依赖注入，不根据发行版本删除�
 ```text
 bootstrap process registry（endpoint origin + network policy）
   -> createProviderEndpointRoutingPort
+       -> fork 默认实现：返回原 URL，不执行配置 IO
        -> 动态实现：按需读取远端配置，拥有原有快照和 single-flight
        -> 静态实现：仅匹配内置端点，不发起配置请求或读取来源标识
   -> 同一个 ProviderEndpointRoutingPort
@@ -29,7 +30,7 @@ bootstrap process registry（endpoint origin + network policy）
 导出只替换该目录，不改公共源码。动态实现的专属测试显式排除，公共 fetch 与静态实现测试两版都保留。
 公共工厂不向上暴露 snapshot、刷新预算或实现 class。网络客户端和来源标识以依赖传入，静态实现不调用它们。
 
-静态实现保持既有开源网关行为：
+显式使用 `createStaticProviderEndpointRoutingPort` 时保留既有开源网关行为；fork 默认工厂不调用它：
 
 | 精确匹配的 HTTPS 端点 | 当前 runtime ZCode origin 下的目标路径 |
 | --- | --- |
