@@ -86,6 +86,8 @@ export function GeneralSectionContent({
   askUserQuestionAutoResolutionEnabled = true,
   modelIoFullRetentionEnabled = false,
   codingPlanQuotaResetAutoUseEnabled = true,
+  codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled = true,
+  codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled = true,
   onDataBaseDirChange,
   onSelectDataBaseDir,
   onTerminalInheritSystemProfileChange = async () => {},
@@ -111,6 +113,8 @@ export function GeneralSectionContent({
   onAskUserQuestionAutoResolutionEnabledChange = async () => {},
   onModelIoFullRetentionEnabledChange = async () => {},
   onCodingPlanQuotaResetAutoUseEnabledChange = async () => {},
+  onCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange = async () => {},
+  onCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange = async () => {},
   onOpenOnboardingDialog,
 }: {
   localePreference: LocalePreference;
@@ -162,6 +166,8 @@ export function GeneralSectionContent({
   askUserQuestionAutoResolutionEnabled?: boolean;
   modelIoFullRetentionEnabled?: boolean;
   codingPlanQuotaResetAutoUseEnabled?: boolean;
+  codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled?: boolean;
+  codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled?: boolean;
   onDataBaseDirChange: (dir: string) => Promise<void>;
   onSelectDataBaseDir: () => Promise<string | null>;
   onTerminalInheritSystemProfileChange: (enabled: boolean) => Promise<void>;
@@ -187,6 +193,10 @@ export function GeneralSectionContent({
   onAskUserQuestionAutoResolutionEnabledChange?: (enabled: boolean) => Promise<void>;
   onModelIoFullRetentionEnabledChange?: (enabled: boolean) => Promise<void>;
   onCodingPlanQuotaResetAutoUseEnabledChange?: (enabled: boolean) => Promise<void>;
+  onCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange?: (
+    enabled: boolean,
+  ) => Promise<void>;
+  onCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange?: (enabled: boolean) => Promise<void>;
   onOpenOnboardingDialog: () => void;
 }) {
   const { intl } = useZCodeIntl();
@@ -775,6 +785,45 @@ export function GeneralSectionContent({
               checked={codingPlanQuotaResetAutoUseEnabled}
               onCheckedChange={(checked) => {
                 void onCodingPlanQuotaResetAutoUseEnabledChange(checked);
+              }}
+            />
+          }
+        />
+        {/* 额度耗尽触发源（spec 同上 v2）：分档开关，任务被额度卡住时核销对应卡并续跑。 */}
+        <SettingsRow
+          label={intl.formatMessage({
+            id: "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted",
+          })}
+          description={intl.formatMessage({
+            id: "settings.codingPlanQuotaResetAutoUseOnFiveHourExhaustedDescription",
+          })}
+          control={
+            <Switch
+              aria-label={intl.formatMessage({
+                id: "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted",
+              })}
+              checked={codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled}
+              onCheckedChange={(checked) => {
+                void onCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange(checked);
+              }}
+            />
+          }
+        />
+        <SettingsRow
+          label={intl.formatMessage({
+            id: "settings.codingPlanQuotaResetAutoUseOnWeekExhausted",
+          })}
+          description={intl.formatMessage({
+            id: "settings.codingPlanQuotaResetAutoUseOnWeekExhaustedDescription",
+          })}
+          control={
+            <Switch
+              aria-label={intl.formatMessage({
+                id: "settings.codingPlanQuotaResetAutoUseOnWeekExhausted",
+              })}
+              checked={codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled}
+              onCheckedChange={(checked) => {
+                void onCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange(checked);
               }}
             />
           }

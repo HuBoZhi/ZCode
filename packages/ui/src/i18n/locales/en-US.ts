@@ -2617,6 +2617,13 @@ const enUS: Record<string, string> = {
   "settings.codingPlanQuotaResetAutoUse": "Use expiring quota resets automatically",
   "settings.codingPlanQuotaResetAutoUseDescription":
     "Automatically use a quota reset when it expires within 30 minutes, so it never goes to waste. Only works while this app is running.",
+  "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted":
+    "Auto-use 5-hour reset when exhausted",
+  "settings.codingPlanQuotaResetAutoUseOnFiveHourExhaustedDescription":
+    "When a task stops because the 5-hour quota is exhausted, automatically use a 5-hour reset and resume the task (even if weekly quota remains).",
+  "settings.codingPlanQuotaResetAutoUseOnWeekExhausted": "Auto-use weekly reset when exhausted",
+  "settings.codingPlanQuotaResetAutoUseOnWeekExhaustedDescription":
+    "When a task stops because the weekly quota is exhausted, automatically use a weekly reset and resume the task.",
   "settings.performanceMode": "Performance mode",
   "settings.performanceModeDescription": "Simplify rendered output to improve performance.",
   "settings.taskAutoArchive": "Auto-archive old tasks",
@@ -3863,6 +3870,8 @@ const enUS: Record<string, string> = {
   "codingPlan.quotaReset.failed": "Reset failed. Please try again.",
   "codingPlan.quotaReset.autoUsed":
     "Expiring quota reset used automatically. Quota restored.",
+  "codingPlan.quotaReset.autoUsedAndResumed":
+    "Quota exhausted. Reset used automatically, resuming your task.",
   "codingPlan.quotaReset.processing": "Resetting 5-hour quota…",
   "codingPlan.quotaReset.processingWeek": "Resetting weekly quota…",
   "codingPlan.quotaReset.done": "5-hour quota reset",

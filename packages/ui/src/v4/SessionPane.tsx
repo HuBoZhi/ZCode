@@ -283,6 +283,7 @@ import { useV4Conversation } from "@/v4/V4ConversationContext.js";
 import { useConversationProjection } from "@/v4/useConversationProjection.js";
 import { usePendingCommandRecovery } from "@/v4/usePendingCommandRecovery.js";
 import { useV4SessionQuotaBanner } from "@/v4/useV4SessionQuotaBanner.js";
+import { useQuotaExhaustedAutoRecover } from "@/v4/useQuotaExhaustedAutoRecover.js";
 import { resolveMcpUnavailableNotice } from "@/v4/mcpUnavailableBannerNotice.js";
 import { shouldFocusTimelineAfterComposerSend } from "@/v4/promptScrollFocusPolicy.js";
 import {
@@ -444,6 +445,8 @@ const EMPTY_SUBAGENT_PROJECTION: NonNullable<ConversationSnapshot["subagents"]> 
   running: [],
   endedTotal: 0,
 };
+// 稳定空引用：quota 自动续跑 hook 的 rows 入参在无快照时不触发依赖变化。
+const EMPTY_CONVERSATION_ROWS: NonNullable<ConversationSnapshot["rows"]>["window"] = [];
 
 const MAX_CONVERSATION_FILE_CHANGES_CACHE_ENTRIES = 20;
 
@@ -4755,6 +4758,17 @@ export function SessionPane({
     modelId: snapshot?.config.model ?? null,
     usageStatsService: baseWorkspaceServices.usageStatsService,
     mcpUnavailableNotice,
+  });
+  // 额度耗尽自动核销并续跑（spec：specs/coding-plan-quota-reset-auto-use.md v2）：
+  // 错误信号、rows 与发送通道都归 SessionPane；重发经 sendTextRef 走正常 admission。
+  useQuotaExhaustedAutoRecover({
+    sessionId: snapshot?.sessionId ?? sessionId,
+    lastError: controlLastError,
+    providerId: snapshot?.config.provider ?? null,
+    rowsWindow: snapshot?.rows.window ?? EMPTY_CONVERSATION_ROWS,
+    sendText: async (text) => {
+      await sendTextRef.current?.(text);
+    },
   });
   const composerError =
     draftModelReadinessError ??

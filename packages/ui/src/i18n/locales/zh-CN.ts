@@ -2462,6 +2462,12 @@ const zhCN: Record<string, string> = {
   "settings.codingPlanQuotaResetAutoUse": "临期自动使用重置卡",
   "settings.codingPlanQuotaResetAutoUseDescription":
     "重置卡剩余有效期不足 30 分钟时自动使用，避免过期作废；仅在本应用运行期间生效。",
+  "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted": "5 小时额度耗尽时自动用卡续跑",
+  "settings.codingPlanQuotaResetAutoUseOnFiveHourExhaustedDescription":
+    "任务因 5 小时额度耗尽停止时，自动使用 5 小时重置卡并继续任务（即使周额度尚有余额）。",
+  "settings.codingPlanQuotaResetAutoUseOnWeekExhausted": "周额度耗尽时自动用卡续跑",
+  "settings.codingPlanQuotaResetAutoUseOnWeekExhaustedDescription":
+    "任务因周额度耗尽停止时，自动使用周重置卡并继续任务。",
   "settings.performanceMode": "性能模式",
   "settings.performanceModeDescription": "精简渲染输出，提高性能。",
   "settings.taskAutoArchive": "自动归档旧任务",
@@ -3639,6 +3645,7 @@ const zhCN: Record<string, string> = {
   "codingPlan.quotaReset.success": "重置成功",
   "codingPlan.quotaReset.failed": "重置失败，请重试",
   "codingPlan.quotaReset.autoUsed": "已自动使用临期重置卡，额度已恢复",
+  "codingPlan.quotaReset.autoUsedAndResumed": "额度耗尽已自动使用重置卡，正在继续任务",
   "codingPlan.quotaReset.processing": "正在重置 5 小时额度…",
   "codingPlan.quotaReset.processingWeek": "正在重置周额度…",
   "codingPlan.quotaReset.done": "5 小时额度已重置",

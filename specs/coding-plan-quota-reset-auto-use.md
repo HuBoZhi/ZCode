@@ -1,5 +1,27 @@
 # 重置卡临期自动核销（fork 行为变更）
 
+## 第二触发源：额度耗尽自动核销并续跑（v2 追加）
+
+任务运行中因额度耗尽（GLM 业务码归因 `quota_exhausted`：1304/1308/1310/1313–1321）而停止时，
+立即核销对应类型的重置卡并自动重发最后一条真实用户输入，让任务继续：
+
+- **5 小时额度耗尽**（entitlement `TOKENS_LIMIT` unit=3 number=5 剩余 0%）且有 FIVE_HOUR 卡
+  → 自动核销。开关 `codingPlanQuotaResetAutoUseOnFiveHourExhausted`（默认开）——用户可决定
+  「5 小时没了但周额度还在时」是否也立即烧 5 小时卡。
+- **周额度耗尽**（`TOKENS_LIMIT` unit=6 剩余 0%）且有 WEEK 卡 → 自动核销。
+  开关 `codingPlanQuotaResetAutoUseOnWeekExhausted`（默认开）。
+- 两档同时耗尽时按 FIVE_HOUR 优先逐张处理；核销 + 重发后若再遇额度错误（新 errorKey），
+  按同一规则再评估（同一 errorKey 只自动恢复一次，防止无限烧卡循环）。
+- **自动续跑**：核销成功后取会话 rows 中最后一条 `origin === "realUser"` 的 `userInput` 行
+  文本（按 `epilogueStart` 裁掉引擎附加尾注），经 SessionPane 正常发送通道重发，admission
+  语义（排队/立即发送/权限）与用户手动发送完全一致。
+- **边界**：仅个人 Coding Plan（内置 providerId 可解析 family）；Team Plan 的 accountAccess
+  接线后续迭代。`lastError` 归因不明确（无业务码）时不动，交给用户。
+- 复用第一触发源的全部基础设施：claim key 按 `(sourceKey, resetType, expiresAt)` 互斥、
+  模块级 attempts 防重、设置触发前实时校验、失败 toast。
+
+## 第一触发源：临期自动核销（v1）
+
 ## 背景与规则
 
 BigModel / Z.ai Coding Plan 的重置机会（「重置卡」：五小时额度重置与周额度重置）在服务端
@@ -43,6 +65,18 @@ status 轮询对账 → entry: available { opportunityCount>0, opportunityExpire
 （不变）；跨窗口唯一性归 Main BroadcastHub claim；开关归 AppSettings 持久化（settingService）。
 
 ## 验收场景
+
+### v2（额度耗尽续跑）
+
+8. 5 小时额度耗尽错误 + 有 5 小时卡 + 开关开 → 自动 `/use` FIVE_HOUR + 重发最后一条真实用户输入。
+9. 周额度耗尽 + 有周卡 + 开关开 → 自动核销 WEEK；对应开关关闭 → 不动。
+10. 5 小时耗尽但对应开关关（用户不想在周额度还有时烧 5h 卡）→ 不核销，仅提示。
+11. 同一 errorKey 只自动恢复一次；重发后再次额度耗尽（新 errorKey）→ 重新评估。
+12. `lastError` 非额度类（如套餐过期 1309、无权限 1311）→ 不核销。
+13. 无对应类型的卡 → 不动作（现有 banner/手动路径兜底）。
+14. 重发文本不含引擎附加尾注（`epilogueStart` 裁剪）。
+
+### v1（临期自动核销）
 
 1. 卡剩余 25 分钟 + 开关开启 → 自动 `/use` 一次，entry 走 processing → completed，成功 toast。
 2. 卡剩余 45 分钟 → 不触发；倒计时进入 30 分钟窗口后（ticker 驱动）触发。

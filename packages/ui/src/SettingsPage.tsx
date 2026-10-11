@@ -738,6 +738,10 @@ export function SettingsPage({
   // 重置卡临期自动核销默认开启（spec：specs/coding-plan-quota-reset-auto-use.md）。
   const codingPlanQuotaResetAutoUseEnabled =
     sharedSettings?.codingPlanQuotaResetAutoUseEnabled !== false;
+  const codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled =
+    sharedSettings?.codingPlanQuotaResetAutoUseOnFiveHourExhausted !== false;
+  const codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled =
+    sharedSettings?.codingPlanQuotaResetAutoUseOnWeekExhausted !== false;
   const [dataBaseDir, setDataBaseDir] = useState("");
   const [terminalInheritSystemProfile, setTerminalInheritSystemProfile] = useState(true);
   const [terminalFontFamily, setTerminalFontFamily] = useState("");
@@ -985,6 +989,38 @@ export function SettingsPage({
         action: "toggle_coding_plan_quota_reset_auto_use",
         trigger: "switch",
         operation: () => updateSharedSettings({ codingPlanQuotaResetAutoUseEnabled: enabled }),
+        completed: {
+          resultSource: "shared_settings",
+          stateAfter: enabled ? "enabled" : "disabled",
+        },
+      });
+    },
+    [updateSharedSettings],
+  );
+  const handleCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange = useCallback(
+    async (enabled: boolean) => {
+      await runSettingsActionAsync({
+        featureId: "settings.conversation",
+        action: "toggle_coding_plan_quota_reset_auto_use_five_hour_exhausted",
+        trigger: "switch",
+        operation: () =>
+          updateSharedSettings({ codingPlanQuotaResetAutoUseOnFiveHourExhausted: enabled }),
+        completed: {
+          resultSource: "shared_settings",
+          stateAfter: enabled ? "enabled" : "disabled",
+        },
+      });
+    },
+    [updateSharedSettings],
+  );
+  const handleCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange = useCallback(
+    async (enabled: boolean) => {
+      await runSettingsActionAsync({
+        featureId: "settings.conversation",
+        action: "toggle_coding_plan_quota_reset_auto_use_week_exhausted",
+        trigger: "switch",
+        operation: () =>
+          updateSharedSettings({ codingPlanQuotaResetAutoUseOnWeekExhausted: enabled }),
         completed: {
           resultSource: "shared_settings",
           stateAfter: enabled ? "enabled" : "disabled",
@@ -1795,6 +1831,12 @@ export function SettingsPage({
                             }
                             modelIoFullRetentionEnabled={modelIoFullRetentionEnabled}
                             codingPlanQuotaResetAutoUseEnabled={codingPlanQuotaResetAutoUseEnabled}
+                            codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled={
+                              codingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabled
+                            }
+                            codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled={
+                              codingPlanQuotaResetAutoUseOnWeekExhaustedEnabled
+                            }
                             onDataBaseDirChange={handleDataBaseDirChange}
                             onSelectDataBaseDir={selectDirectory}
                             onTerminalInheritSystemProfileChange={
@@ -1810,6 +1852,12 @@ export function SettingsPage({
                             }
                             onCodingPlanQuotaResetAutoUseEnabledChange={
                               handleCodingPlanQuotaResetAutoUseEnabledChange
+                            }
+                            onCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange={
+                              handleCodingPlanQuotaResetAutoUseOnFiveHourExhaustedEnabledChange
+                            }
+                            onCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange={
+                              handleCodingPlanQuotaResetAutoUseOnWeekExhaustedEnabledChange
                             }
                             onHttpProxyChange={handleHttpProxyChange}
                             onHttpProxyNoProxyChange={handleHttpProxyNoProxyChange}

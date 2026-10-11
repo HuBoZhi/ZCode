@@ -1,7 +1,8 @@
 /* eslint-disable max-lines -- 额度重置 hook 集中处理 scope 共享请求、轮询、幂等核销与服务端历史对账。 */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { IUsageStatsService } from "@zcode/services";
+import type { IBroadcastService, ISettingService, IUsageStatsService } from "@zcode/services";
 import type {
+  AppSettings,
   CodingPlanResetScopeRequest,
   CodingPlanResetStatusSnapshot,
   CodingPlanResetType,
@@ -160,6 +161,124 @@ function buildAutoUseClaimKey(
   expiresAt: number,
 ): string {
   return `coding-plan-reset-autouse:${encodeURIComponent(sourceKey)}:${resetType}:${expiresAt}`;
+}
+
+export interface ExecuteCodingPlanQuotaResetAutoUseParams {
+  service: IUsageStatsService;
+  scope: CodingPlanResetScopeRequest;
+  sourceKey: string;
+  broadcastService: Pick<IBroadcastService, "acquireClaim" | "commitClaim" | "releaseClaim">;
+  settingService?: Pick<ISettingService, "get">;
+  resetType: CodingPlanResetType;
+  expiresAt: number;
+  /** 核销动作：临期/耗尽触发源各自绑定现有手动 reset() 通道。 */
+  reset: (resetType: CodingPlanResetType) => Promise<void>;
+  /** 触发前实时读取设置后的放行判定（不同触发源有不同开关）；读取异常按放行处理。 */
+  isAllowed: (settings: AppSettings) => boolean;
+  /** 核销 + commit 成功后的反馈（toast 文案由调用方决定）。 */
+  onSuccess?: () => void;
+}
+
+/**
+ * 自动核销的唯一执行通道（spec：specs/coding-plan-quota-reset-auto-use.md），临期与额度
+ * 耗尽两个触发源共用：跨窗口 claim 决定唯一执行者，模块级 attempts 计数跨触发源防重。
+ * broadcastService 由调用方保证存在——缺失时宁作废不双核销，不进入本函数。
+ *
+ * @returns true = 本次核销 + commit 成功（可触发续跑）；false = 未执行（防重/开关/claim
+ *   被其他执行者占用）；核销失败以 reject 抛出（失败 toast 已在 reset() 内部发出）。
+ */
+export async function executeCodingPlanQuotaResetAutoUse(
+  params: ExecuteCodingPlanQuotaResetAutoUseParams,
+): Promise<boolean> {
+  const { service, scope, sourceKey, broadcastService, settingService } = params;
+  const { resetType, expiresAt } = params;
+  const attemptKey = `${buildScopeKey(scope)}::${resetType}::${expiresAt}`;
+  const attempts = getServiceMap(autoUseAttemptsByService, service);
+  const existing = attempts.get(attemptKey);
+  if (existing?.inFlight) {
+    return false;
+  }
+  if (existing && existing.attempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
+    return false;
+  }
+  const nowMs = Date.now();
+  if (
+    existing &&
+    nowMs - existing.lastTriedAt < CODING_PLAN_QUOTA_RESET_AUTO_USE_RETRY_COOLDOWN_MS
+  ) {
+    return false;
+  }
+  attempts.set(attemptKey, {
+    attempts: existing?.attempts ?? 0,
+    lastTriedAt: nowMs,
+    inFlight: true,
+  });
+
+  try {
+    // 触发前实时校验开关：挂载时读到的缓存可能已过期，关闭应立即生效。
+    if (settingService) {
+      try {
+        const settings = await settingService.get();
+        if (!params.isAllowed(settings)) {
+          return false;
+        }
+      } catch {
+        // 设置读取失败按放行继续：核销收益非负，不应因设置接口抖动作废重置卡。
+      }
+    }
+    let claim: Awaited<ReturnType<typeof broadcastService.acquireClaim>>;
+    try {
+      claim = await broadcastService.acquireClaim(
+        buildAutoUseClaimKey(sourceKey, resetType, expiresAt),
+      );
+    } catch {
+      // claim RPC 异常按稍后重试处理，冷却已由 lastTriedAt 保证。
+      return false;
+    }
+    if (claim.status !== "acquired") {
+      // busy：其他窗口在处理这张卡；committed：已被核销；unavailable：Main 暂不可用，
+      // 三者都不该由本窗口继续，留待下一次评估。
+      return false;
+    }
+    const nextAttempts = (existing?.attempts ?? 0) + 1;
+    attempts.set(attemptKey, {
+      attempts: nextAttempts,
+      lastTriedAt: nowMs,
+      inFlight: true,
+    });
+    try {
+      await params.reset(resetType);
+      try {
+        await broadcastService.commitClaim(claim.lease);
+      } catch {
+        // 核销本身已成功；commit 失败只会让其他窗口多试一次 /use，服务端幂等与
+        // status 对账会兜住，不影响结果。
+      }
+      params.onSuccess?.();
+      return true;
+    } catch (error) {
+      try {
+        await broadcastService.releaseClaim(claim.lease);
+      } catch {
+        // 迟到 token 的 release 由 Main 忽略，这里无需处理。
+      }
+      // 失败 toast 已由 reset() 内部发出；这里只负责停止条件与日志。
+      if (nextAttempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
+        logger.warn("[coding-plan-reset] auto use attempts exhausted", {
+          sourceKey,
+          resetType,
+          expiresAt,
+          error: toErrorMessage(error),
+        });
+      }
+      throw error;
+    }
+  } finally {
+    const current = attempts.get(attemptKey);
+    if (current) {
+      attempts.set(attemptKey, { ...current, inFlight: false });
+    }
+  }
 }
 
 function buildScopeKey(scope: CodingPlanResetScopeRequest): string {
@@ -878,99 +997,31 @@ export function useCodingPlanQuotaResetUi({
   const resetFiveHour = useCallback(() => reset("FIVE_HOUR"), [reset]);
   const resetWeek = useCallback(() => reset("WEEK"), [reset]);
 
-  // 临期自动核销：跨窗口以 (sourceKey, resetType, expiresAt) 粒度 claim，winner 窗口复用
-  // 手动 reset()（幂等键、processing 状态、status 对账、防双核销全部继承）；其余窗口跳过。
-  // 成功 commitClaim 后同卡在全应用生命周期内不再被任何窗口重试；失败 releaseClaim 允许
-  // 后续重试。broadcastService 缺失时（旧 host/测试 double）不执行：宁作废不双核销。
+  // 临期自动核销：唯一执行通道在 executeCodingPlanQuotaResetAutoUse（与额度耗尽触发源共用），
+  // 这里只绑定本 hook 的 reset() 与临期总开关；claim/attempts/失败处理全部继承。
   const runAutoUse = useCallback(
     async (resetType: CodingPlanResetType, expiresAt: number) => {
       if (!enabled || !sourceKey || !usageStatsService || !scope || !broadcastService) {
         return;
       }
-      const attemptKey = `${buildScopeKey(scope)}::${resetType}::${expiresAt}`;
-      const attempts = getServiceMap(autoUseAttemptsByService, usageStatsService);
-      const existing = attempts.get(attemptKey);
-      if (existing?.inFlight) {
-        return;
-      }
-      if (existing && existing.attempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
-        return;
-      }
-      const nowMs = Date.now();
-      if (existing && nowMs - existing.lastTriedAt < CODING_PLAN_QUOTA_RESET_AUTO_USE_RETRY_COOLDOWN_MS) {
-        return;
-      }
-      attempts.set(attemptKey, {
-        attempts: existing?.attempts ?? 0,
-        lastTriedAt: nowMs,
-        inFlight: true,
-      });
-
-      try {
-        // 触发前实时校验开关：挂载时读到的缓存可能已过期，关闭应立即生效。
-        if (settingService) {
-          try {
-            const settings = await settingService.get();
-            if (settings.codingPlanQuotaResetAutoUseEnabled === false) {
-              return;
-            }
-          } catch {
-            // 设置读取失败按默认开启继续，理由同 autoUseEnabled 初值。
-          }
-        }
-        let claim;
-        try {
-          claim = await broadcastService.acquireClaim(
-            buildAutoUseClaimKey(sourceKey, resetType, expiresAt),
-          );
-        } catch {
-          // claim RPC 异常按稍后重试处理，冷却已由 lastTriedAt 保证。
-          return;
-        }
-        if (claim.status !== "acquired") {
-          // busy：其他窗口在处理这张卡；committed：已被核销；unavailable：Main 暂不可用，
-          // 三者都不该由本窗口继续，留待下一次评估。
-          return;
-        }
-        const nextAttempts = (existing?.attempts ?? 0) + 1;
-        attempts.set(attemptKey, {
-          attempts: nextAttempts,
-          lastTriedAt: nowMs,
-          inFlight: true,
-        });
-        try {
-          await reset(resetType);
-          try {
-            await broadcastService.commitClaim(claim.lease);
-          } catch {
-            // 核销本身已成功；commit 失败只会让其他窗口多试一次 /use，服务端幂等与
-            // status 对账会兜住，不影响结果。
-          }
+      await executeCodingPlanQuotaResetAutoUse({
+        service: usageStatsService,
+        scope,
+        sourceKey,
+        broadcastService,
+        settingService,
+        resetType,
+        expiresAt,
+        reset: (type) => reset(type),
+        isAllowed: (settings) => settings.codingPlanQuotaResetAutoUseEnabled !== false,
+        onSuccess: () => {
           toast(intl.formatMessage({ id: "codingPlan.quotaReset.autoUsed" }), {
             variant: "info",
           });
-        } catch (error) {
-          try {
-            await broadcastService.releaseClaim(claim.lease);
-          } catch {
-            // 迟到 token 的 release 由 Main 忽略，这里无需处理。
-          }
-          // 失败 toast 已由 reset() 内部发出；这里只负责停止条件与日志。
-          if (nextAttempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
-            logger.warn("[coding-plan-reset] auto use attempts exhausted", {
-              sourceKey,
-              resetType,
-              expiresAt,
-              error: toErrorMessage(error),
-            });
-          }
-        }
-      } finally {
-        const current = attempts.get(attemptKey);
-        if (current) {
-          attempts.set(attemptKey, { ...current, inFlight: false });
-        }
-      }
+        },
+      }).catch(() => {
+        // 失败 toast/日志已在执行通道与 reset() 内部处理；这里吞掉避免未处理 rejection。
+      });
     },
     [
       broadcastService,

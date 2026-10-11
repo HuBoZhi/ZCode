@@ -339,6 +339,16 @@ export interface AppSettings {
    */
   codingPlanQuotaResetAutoUseEnabled?: boolean;
   /**
+   * 任务因 5 小时额度耗尽停止时是否自动核销 5 小时重置卡并续跑（含周额度尚有余额的场景）。
+   * 关闭后此类耗尽只提示不烧卡；临期兜底核销不受影响。
+   */
+  codingPlanQuotaResetAutoUseOnFiveHourExhausted?: boolean;
+  /**
+   * 任务因周额度耗尽停止时是否自动核销周重置卡并续跑。
+   * 关闭后此类耗尽只提示不烧卡；临期兜底核销不受影响。
+   */
+  codingPlanQuotaResetAutoUseOnWeekExhausted?: boolean;
+  /**
    * 用户选的动态工作流模式（docs/dynamic-workflow/launch.md「The user's choice」）。缺席 = 跟随服务端
    * 提供的模式；只在功能已提供时生效。选回提供的模式时删除该字段，未改动的安装继续跟随服务端翻转。
    */

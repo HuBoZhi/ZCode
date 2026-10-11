@@ -500,6 +500,9 @@ const appSettingsObjectSchema = z.object({
   modelIoFullRetentionEnabled: z.boolean().default(false),
   // 重置卡临期自动核销默认开启：到期作废收益为 0，核销收益非负（spec：specs/coding-plan-quota-reset-auto-use.md）。
   codingPlanQuotaResetAutoUseEnabled: z.boolean().default(true),
+  // 额度耗尽触发源的两档独立开关（spec 同上）：任务被额度卡住时核销对应卡并续跑。
+  codingPlanQuotaResetAutoUseOnFiveHourExhausted: z.boolean().default(true),
+  codingPlanQuotaResetAutoUseOnWeekExhausted: z.boolean().default(true),
   dynamicWorkflowMode: dynamicWorkflowModeSettingSchema,
   enabledBuiltinAgentCliProviders: enabledBuiltinAgentCliProvidersSchema.default([
     ...ZCODE_ENABLED_AGENT_PROVIDERS,
@@ -579,6 +582,8 @@ export const appSettingsPatchSchema = z.object({
   modelIoFullRetentionEnabled: z.boolean().optional(),
   // 重置卡临期自动核销（spec：specs/coding-plan-quota-reset-auto-use.md）；默认开启，缺失按 true 兼容。
   codingPlanQuotaResetAutoUseEnabled: z.boolean().optional(),
+  codingPlanQuotaResetAutoUseOnFiveHourExhausted: z.boolean().optional(),
+  codingPlanQuotaResetAutoUseOnWeekExhausted: z.boolean().optional(),
   // 空串是「删除选择、回到跟随」的哨兵：RPC 会吞掉 undefined，normalizeSettingsPatch 把它归一成删除。
   dynamicWorkflowMode: z.union([z.enum(DYNAMIC_WORKFLOW_MODES), z.literal("")]).optional(),
   enabledBuiltinAgentCliProviders: enabledBuiltinAgentCliProvidersSchema.optional(),
