@@ -1,4 +1,5 @@
 import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,7 +39,7 @@ describe("desktop main logger", () => {
       expect(() => logger.info("main log append fault")).not.toThrow();
       expect(() => webRemoteControlRelayLogger.warn("relay log append fault")).not.toThrow();
 
-      const logDir = join(tempRoot, ".zcode", "v2", "logs");
+      const logDir = join(tempRoot, ZCODE_DATA_DIR_NAME, "v2", "logs");
       await expect(readdir(logDir)).resolves.toEqual(["web-remote-control"]);
       await expect(readdir(join(logDir, "web-remote-control"))).resolves.toEqual([]);
 

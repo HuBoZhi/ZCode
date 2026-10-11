@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
@@ -10,8 +10,16 @@ import {
   resolveWindowsAppUserModelIdForFlavor,
   resolveDesktopProductIdentity,
 } from "../scripts/desktop-product-identity.mjs";
+import { ZCODE_AGENT_RUNTIME, ZCODE_DATA_DIR_NAME } from "@zcode/shared";
+import { resolveCuaPermissionPanelMessages } from "../src/renderer/cuaPermissionPanelMessages.js";
 
 describe("desktop product identity", () => {
+
+  it("品牌数据根目录名与 agent runtime 配置目录一致（fork 数据根隔离）", () => {
+    // specs/fork-data-root-isolation.md：单一权威在 @zcode/shared，services / CLI / desktop 共同引用。
+    expect(ZCODE_DATA_DIR_NAME).toBe(".zetacode");
+    expect(ZCODE_AGENT_RUNTIME.nativeConfigDir).toBe(`${ZCODE_DATA_DIR_NAME}/cli`);
+  });
   it("根锁文件的发布版本与构建版本一致", () => {
     // 合并上游发布提交只对齐当前版本，不恢复上游旧版本，也不重算依赖锁。
     const readRootJson = (name: string) =>
@@ -115,5 +123,26 @@ describe("desktop product identity", () => {
   it("开发态继续使用独立 AUMID，避免污染打包版 Shell 身份", () => {
     // fork 的开发态 AUMID 同样改名，与官方 ZCode 的开发调试身份区分开。
     expect(resolveWindowsAppUserModelId({}, { isPackaged: false })).toBe("dev.zetacode.app.dev");
+  });
+
+  it("renderer 窗口标题不得回退成旧 ZCode 品牌", () => {
+    // 主窗口 BrowserWindow 的 title 为空，任务栏悬浮预览/Alt+Tab 显示的实际标题来自
+    // renderer HTML 的 <title>（页面加载后 document.title 覆盖空标题）。这些静态标题
+    // 曾在 fork 改名时遗漏，导致任务栏悬浮弹窗仍显示 "ZCode"。
+    const rendererDir = resolve(import.meta.dirname, "../src/renderer");
+    const htmlFiles = readdirSync(rendererDir).filter((name) => name.endsWith(".html"));
+    expect(htmlFiles.length).toBeGreaterThan(0);
+    for (const fileName of htmlFiles) {
+      const content = readFileSync(resolve(rendererDir, fileName), "utf8");
+      const title = content.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
+      expect(title.startsWith("ZCode"), `${fileName} title="${title}"`).toBe(false);
+    }
+    // CUA 权限浮窗在运行时用 documentTitle 覆盖 <title>，同样必须跟随 ZetaCode 品牌。
+    expect(resolveCuaPermissionPanelMessages("zh-CN", "accessibility").documentTitle).toBe(
+      "ZetaCode Computer Use 权限",
+    );
+    expect(resolveCuaPermissionPanelMessages("en-US", "accessibility").documentTitle).toBe(
+      "ZetaCode Computer Use Permissions",
+    );
   });
 });

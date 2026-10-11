@@ -1,4 +1,5 @@
 import type {
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
   ScriptWorkflowRunStats,
   ScriptWorkflowStorePort,
   SessionId,
@@ -171,7 +172,7 @@ export function inferScriptWorkflowScope(
   workingDirectory: string,
 ): "explicit" | "project" | "user" {
   if (isWithin(scriptPath, join(workingDirectory, ".zcode", "workflows"))) return "project";
-  if (isWithin(scriptPath, join(homedir(), ".zcode", "workflows"))) return "user";
+  if (isWithin(scriptPath, join(homedir(), ZCODE_DATA_DIR_NAME, "workflows"))) return "user";
   return "explicit";
 }
 

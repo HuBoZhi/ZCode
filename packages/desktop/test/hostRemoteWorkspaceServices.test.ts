@@ -57,9 +57,9 @@ const clientConfigService = {
 function createTempHome(): string {
   const home = mkdtempSync(join(tmpdir(), "zcode-remote-workspace-services-"));
   // Bug 根因：模型供应商存储的默认 data base dir 在模块加载时已经固定；只改 HOME
-  // 会继续读取真实 ~/.zcode/v2，并让 getAll 的后台权益请求污染下一个测试。
+  // 会继续读取真实 ~/.zetacode/v2，并让 getAll 的后台权益请求污染下一个测试。
   setDataBaseDir(home);
-  // Bug 根因：设置服务按 process.env.HOME 实时定位 ~/.zcode/v2/setting.json。只改 data base dir
+  // Bug 根因：设置服务按 process.env.HOME 实时定位 ~/.zetacode/v2/setting.json。只改 data base dir
   // 时会读到开发机真实设置；配置了 httpProxy 的机器上 Host API 改走 undici 代理 dispatcher，
   // 绕过 globalThis.fetch mock 直连线上并 401。HOME 由 afterEach 统一还原。
   process.env.HOME = home;
@@ -738,7 +738,7 @@ describe("remote workspace host service wiring", () => {
     } as const;
     const remoteAttachment = {
       ...hostAttachment,
-      localPath: "/home/tester/.zcode/tmp/prompt-attachments/input-1/01-pasted.txt",
+      localPath: "/home/tester/.zetacode/tmp/prompt-attachments/input-1/01-pasted.txt",
     };
     const rawSendPrompt = vi.fn(async () => undefined);
     const observedByReporting: unknown[] = [];
@@ -784,7 +784,7 @@ describe("remote workspace host service wiring", () => {
     const expectedParams = {
       taskId: "task-1",
       traceId: "input-1",
-      content: "read /home/tester/.zcode/tmp/prompt-attachments/input-1/01-pasted.txt",
+      content: "read /home/tester/.zetacode/tmp/prompt-attachments/input-1/01-pasted.txt",
       attachments: [remoteAttachment],
     };
     expect(observedByReporting).toEqual([expectedParams]);

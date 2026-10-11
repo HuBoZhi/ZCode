@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -27,7 +28,7 @@ describe("createTempTextAttachment", () => {
 
     expect(result.mimeType).toBe("text/plain");
     expect(result.filename).toMatch(/^pasted-text-20260630-104512-[a-f0-9-]+\.txt$/u);
-    expect(result.localPath).toContain(join(tempRoot, ".zcode", "tmp", "paste-attachments"));
+    expect(result.localPath).toContain(join(tempRoot, ZCODE_DATA_DIR_NAME, "tmp", "paste-attachments"));
     await expect(readFile(result.localPath, "utf8")).resolves.toBe("hello pasted text");
     await expect(stat(result.localPath)).resolves.toMatchObject({
       size: Buffer.byteLength("hello pasted text", "utf8"),

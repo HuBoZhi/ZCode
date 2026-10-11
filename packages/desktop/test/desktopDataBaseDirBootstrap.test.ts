@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import {
   extractBootstrapDataBaseDir,
   resolveBootstrapSettingsFile,
@@ -23,7 +24,7 @@ describe("desktopDataBaseDirBootstrap", () => {
     const result = resolveBootstrapSettingsFile("/Users/tester");
     // Windows 下 path.join 使用反斜杠，统一为正斜杠后再比较
     expect(result.replace(/\\/g, "/")).toBe(
-      "/Users/tester/.zcode/v2/setting.json",
+      `/Users/tester/${ZCODE_DATA_DIR_NAME}/v2/setting.json`,
     );
   });
 });

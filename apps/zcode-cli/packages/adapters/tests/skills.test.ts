@@ -1,6 +1,7 @@
 import { chmod, mkdtemp, rm, mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { describe, expect, it } from "vitest";
 import { createNodeSkillAdapter } from "../src/skills/index.js";
 
@@ -96,7 +97,7 @@ describe("NodeSkillAdapter", () => {
   it("discovers user skills imported as directory symlinks", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zcode-skills-"));
     const sourceSkill = join(dir, "external-skills", "linked-skill");
-    const userSkillRoot = join(dir, "home", ".zcode", "skills");
+    const userSkillRoot = join(dir, "home", ZCODE_DATA_DIR_NAME, "skills");
     const linkedSkill = join(userSkillRoot, "linked-skill");
 
     try {
@@ -123,7 +124,7 @@ describe("NodeSkillAdapter", () => {
   it("filters disabled skills when the scanned skill is a symlink to the configured path", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zcode-skills-"));
     const sourceSkill = join(dir, "cloud-skills", "linked-disabled-skill");
-    const userSkillRoot = join(dir, "home", ".zcode", "skills");
+    const userSkillRoot = join(dir, "home", ZCODE_DATA_DIR_NAME, "skills");
     const linkedSkill = join(userSkillRoot, "linked-disabled-skill");
 
     try {
@@ -172,7 +173,7 @@ describe("NodeSkillAdapter", () => {
   it("keeps same-name skills from different paths", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zcode-skills-"));
     const projectSkill = join(dir, ".zcode", "skills", "same-skill");
-    const userSkill = join(dir, "home", ".zcode", "skills", "same-skill");
+    const userSkill = join(dir, "home", ZCODE_DATA_DIR_NAME, "skills", "same-skill");
 
     try {
       await mkdir(projectSkill, { recursive: true });

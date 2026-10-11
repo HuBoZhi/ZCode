@@ -26,8 +26,8 @@ describe("desktop e2e CLI config helpers", () => {
 
   it("restores an existing CLI config after a temporary seed", async () => {
     const home = await createTempHome();
-    const cliConfigFile = join(home, ".zcode", "cli", "config.json");
-    await mkdir(join(home, ".zcode", "cli"), { recursive: true });
+    const cliConfigFile = join(home, ".zetacode", "cli", "config.json");
+    await mkdir(join(home, ".zetacode", "cli"), { recursive: true });
     await writeFile(
       cliConfigFile,
       JSON.stringify({ provider: { existing: true } }, null, 2),
@@ -47,7 +47,7 @@ describe("desktop e2e CLI config helpers", () => {
 
   it("removes the CLI config when restoring a missing-file snapshot", async () => {
     const home = await createTempHome();
-    const cliConfigFile = join(home, ".zcode", "cli", "config.json");
+    const cliConfigFile = join(home, ".zetacode", "cli", "config.json");
 
     const { restoreCliConfig, seedCliConfig, snapshotCliConfig } = await importDesktopAppHelper();
     const snapshot = await snapshotCliConfig();

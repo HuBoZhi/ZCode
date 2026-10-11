@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { describe, expect, it } from "vitest";
 import { createNodeCustomCommandAdapter } from "../src/commands/index.js";
 
@@ -113,7 +114,7 @@ describe("NodeCustomCommandAdapter", () => {
   it("keeps the higher-priority duplicate command", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zcode-commands-"));
     const projectDir = join(dir, ".zcode", "commands");
-    const userDir = join(dir, "home", ".zcode", "commands");
+    const userDir = join(dir, "home", ZCODE_DATA_DIR_NAME, "commands");
 
     try {
       await mkdir(projectDir, { recursive: true });

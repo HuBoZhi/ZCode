@@ -34,7 +34,7 @@ export async function createWorkerSelectionIntegration() {
   let deliveryPaused = false;
   const runtimePaths = {
     zcodeBuiltinFilePath: resolve("../../config/provider/zcode-builtin.json"),
-    personalFilePath: join(home, ".zcode/v2/provider_config.json"),
+    personalFilePath: join(home, ".zetacode/v2/provider_config.json"),
   };
   const runtime = new NodeProviderRegistryRuntime({
     ...runtimePaths,

@@ -454,7 +454,7 @@ describe("buildWslArgs", () => {
     const backend = new WSLBackend({ kind: "wsl", distro: "Ubuntu-24.04" });
     const progress: Array<{ uploadedBytes: number; totalBytes: number }> = [];
 
-    await backend.upload(localPath, "~/.zcode/tmp/attachment.bin", {
+    await backend.upload(localPath, "~/.zetacode/tmp/attachment.bin", {
       onProgress: (event) => progress.push(event),
     });
 
@@ -468,7 +468,7 @@ describe("buildWslArgs", () => {
         "--",
         "bash",
         "-lc",
-        "mkdir -p '/home/tester/.zcode/tmp' && cat > '/home/tester/.zcode/tmp/attachment.bin'",
+        "mkdir -p '/home/tester/.zetacode/tmp' && cat > '/home/tester/.zetacode/tmp/attachment.bin'",
       ],
       expect.any(Object),
     );
@@ -487,7 +487,7 @@ describe("buildWslArgs", () => {
     controller.abort();
 
     await expect(
-      backend.upload(localPath, "~/.zcode/tmp/attachment.bin", {
+      backend.upload(localPath, "~/.zetacode/tmp/attachment.bin", {
         signal: controller.signal,
       }),
     ).rejects.toMatchObject({ name: "AbortError" });

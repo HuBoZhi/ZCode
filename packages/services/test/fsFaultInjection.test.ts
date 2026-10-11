@@ -19,19 +19,19 @@ describe("fsFaultInjection", () => {
     expect(() =>
       injector.maybeThrow({
         operation: "rename",
-        path: "/tmp/demo/.zcode/session.json",
+        path: "/tmp/demo/.zetacode/session.json",
       }),
     ).not.toThrow();
 
     expect(() =>
       injector.maybeThrow({
         operation: "writeFile",
-        path: "/tmp/demo/.zcode/session.json",
+        path: "/tmp/demo/.zetacode/session.json",
       }),
     ).toThrow(
       expect.objectContaining({
         code: "ENOSPC",
-        path: "/tmp/demo/.zcode/session.json",
+        path: "/tmp/demo/.zetacode/session.json",
         syscall: "writeFile",
         zcodeFsFaultId: "D01-session-history-enospc",
       }),
@@ -43,7 +43,7 @@ describe("fsFaultInjection", () => {
         id: "D01-session-history-enospc",
         matchIndex: 1,
         operation: "writeFile",
-        path: "/tmp/demo/.zcode/session.json",
+        path: "/tmp/demo/.zetacode/session.json",
       },
     ]);
   });
@@ -61,13 +61,13 @@ describe("fsFaultInjection", () => {
     expect(() =>
       injector.maybeThrow({
         operation: "writeFile",
-        path: "/tmp/home/.zcode/v2/provider_config.json",
+        path: "/tmp/home/.zetacode/v2/provider_config.json",
       }),
     ).toThrow(expect.objectContaining({ code: "EACCES" }));
     expect(() =>
       injector.maybeThrow({
         operation: "writeFile",
-        path: "/tmp/home/.zcode/v2/provider_config.json",
+        path: "/tmp/home/.zetacode/v2/provider_config.json",
       }),
     ).not.toThrow();
     expect(injector.getHits()).toHaveLength(1);

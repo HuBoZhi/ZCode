@@ -22,8 +22,9 @@ export function resolveE2EHomeDir({
 
 export function resolveE2EStorageRoot(e2eHomeDir = resolveE2EHomeDir()): string {
   // Bug 根因：回滚 storage profile 时删除了仍被 E2E 用例依赖的路径 helper。
-  // E2E 继续隔离 HOME，但 CLI 根固定使用历史目录 .zcode，不再区分 dev/stable profile。
-  return join(e2eHomeDir, ".zcode");
+  // E2E 继续隔离 HOME，但 CLI 根固定使用品牌数据根 .zetacode（与 agent 的
+  // ZCODE_DATA_DIR_NAME 一致，见 specs/fork-data-root-isolation.md），不再区分 dev/stable profile。
+  return join(e2eHomeDir, ".zetacode");
 }
 
 export function resolveE2ERuntimeRoot(e2eHomeDir = resolveE2EHomeDir()): string {

@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -54,7 +55,7 @@ describe("MCP Source Descriptors", () => {
 
     expect(descriptor).toBeDefined();
     expect(descriptor.source).toBe("zcodeagentmcp");
-    expect(descriptor.configDirSegments).toEqual([".zcode", "cli"]);
+    expect(descriptor.configDirSegments).toEqual([ZCODE_DATA_DIR_NAME, "cli"]);
     expect(descriptor.fileName).toBe("config.json");
     expect(descriptor.format).toBe("json");
     expect(descriptor.configKeyName).toBe("mcp.servers");
@@ -75,10 +76,10 @@ describe("MCP Source Descriptors", () => {
 });
 
 describe("MCP 配置文件路径", () => {
-  it("zcodeagentmcp 主配置文件应在 ~/.zcode/cli/config.json", () => {
+  it("zcodeagentmcp 主配置文件应在用户级品牌数据根的 cli/config.json", () => {
     const descriptor = getSourceDescriptor("zcodeagentmcp");
 
-    expect(descriptor.configDirSegments).toEqual([".zcode", "cli"]);
+    expect(descriptor.configDirSegments).toEqual([ZCODE_DATA_DIR_NAME, "cli"]);
     expect(descriptor.fileName).toBe("config.json");
   });
 
@@ -94,8 +95,8 @@ describe("MCP enabled state", () => {
   it("配置文件不可解析时应上抛，不能按空列表继续 replace", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
-    writeFileSync(join(home, ".zcode", "cli", "config.json"), "{ invalid json", "utf-8");
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
+    writeFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "{ invalid json", "utf-8");
 
     await expect(loadCliMcpFromUserDirectory()).rejects.toBeInstanceOf(SyntaxError);
   });
@@ -107,7 +108,7 @@ describe("MCP enabled state", () => {
     mkdirSync(join(workspacePath, ".zcode"), { recursive: true });
     mkdirSync(join(workspacePath, ".agents"), { recursive: true });
     mkdirSync(join(workspacePath, ".claude"), { recursive: true });
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     mkdirSync(join(home, ".agents"), { recursive: true });
     mkdirSync(join(home, ".claude"), { recursive: true });
     writeFileSync(
@@ -132,7 +133,7 @@ describe("MCP enabled state", () => {
       "utf-8",
     );
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -240,15 +241,15 @@ describe("MCP enabled state", () => {
   it("cleans old directory override when writing zcode MCP server enabled state", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
             browser: { command: "npx", args: ["-y", "browser-mcp"] },
           },
-          [join(home, ".zcode", "cli")]: {
+          [join(home, ZCODE_DATA_DIR_NAME, "cli")]: {
             browser: { enable: false },
           },
         },
@@ -267,22 +268,22 @@ describe("MCP enabled state", () => {
       location: server?.location,
     });
 
-    const saved = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8"));
+    const saved = JSON.parse(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8"));
     expect(saved.mcp.servers.browser).toEqual({
       command: "npx",
       args: ["-y", "browser-mcp"],
       enabled: false,
     });
-    expect(saved.mcp[join(home, ".zcode", "cli")]).toBeUndefined();
+    expect(saved.mcp[join(home, ZCODE_DATA_DIR_NAME, "cli")]).toBeUndefined();
   });
 
   it("reports a server disabled through enabled:false as disabled", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     // 外部工具/手工编辑只写 enabled:false，桌面端也必须把它显示为已停用。
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -303,10 +304,10 @@ describe("MCP enabled state", () => {
   it("overwrites a stale enabled:true flag when disabling a server", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     // 复现线上配置：同一条 server 同时带 enable 与 enabled，停用后不能留下自相矛盾的字段。
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -328,7 +329,7 @@ describe("MCP enabled state", () => {
       location: server?.location,
     });
 
-    const saved = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8"));
+    const saved = JSON.parse(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8"));
     expect(saved.mcp.servers.browser).toEqual({
       command: "npx",
       args: ["-y", "browser-mcp"],
@@ -339,10 +340,10 @@ describe("MCP enabled state", () => {
   it("migrates a legacy enable flag to enabled on load", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     // 存量配置只有桌面端历史写入的 enable；加载时应就地迁移成契约字段 enabled。
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -358,7 +359,7 @@ describe("MCP enabled state", () => {
     expect(loaded.servers.find((item) => item.name === "browser")).toEqual(
       expect.objectContaining({ enabled: false }),
     );
-    const saved = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8"));
+    const saved = JSON.parse(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8"));
     expect(saved.mcp.servers.browser).toEqual({
       command: "npx",
       args: ["-y", "browser-mcp"],
@@ -369,10 +370,10 @@ describe("MCP enabled state", () => {
   it("keeps a server disabled when legacy enable:false collides with enabled:true", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     // 线上事故配置：停用写了 enable:false，但外部导入残留 enabled:true。迁移必须保住停用语义。
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -393,7 +394,7 @@ describe("MCP enabled state", () => {
     expect(loaded.servers.find((item) => item.name === "browser")).toEqual(
       expect.objectContaining({ enabled: false }),
     );
-    const saved = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8"));
+    const saved = JSON.parse(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8"));
     expect(saved.mcp.servers.browser).toEqual({
       command: "npx",
       args: ["-y", "browser-mcp"],
@@ -404,7 +405,7 @@ describe("MCP enabled state", () => {
   it("leaves the config file byte-identical when no legacy enable flag exists", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     // 迁移必须幂等：没有残留字段时不能重写文件，否则每次加载都会动用户的配置。
     const raw = JSON.stringify({
       mcp: {
@@ -413,19 +414,19 @@ describe("MCP enabled state", () => {
         },
       },
     });
-    writeFileSync(join(home, ".zcode", "cli", "config.json"), raw, "utf-8");
+    writeFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), raw, "utf-8");
 
     await loadCliMcpFromUserDirectory();
 
-    expect(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8")).toBe(raw);
+    expect(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8")).toBe(raw);
   });
 
   it("clears a stale enabled:false flag when re-enabling a server", async () => {
     const home = makeTempRoot();
     process.env.HOME = home;
-    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    mkdirSync(join(home, ZCODE_DATA_DIR_NAME, "cli"), { recursive: true });
     writeFileSync(
-      join(home, ".zcode", "cli", "config.json"),
+      join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"),
       JSON.stringify({
         mcp: {
           servers: {
@@ -447,7 +448,7 @@ describe("MCP enabled state", () => {
       location: server?.location,
     });
 
-    const saved = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf-8"));
+    const saved = JSON.parse(readFileSync(join(home, ZCODE_DATA_DIR_NAME, "cli", "config.json"), "utf-8"));
     expect(saved.mcp.servers.browser).toEqual({
       command: "npx",
       args: ["-y", "browser-mcp"],

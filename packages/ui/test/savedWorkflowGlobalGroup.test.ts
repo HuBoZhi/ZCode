@@ -32,7 +32,7 @@ const fileWatcherService = {
 };
 
 const listResult: { current: ZCodeWorkflowsListResult | (() => never) } = {
-  current: { workflows: [], invalid: [], dir: "/home/.zcode/workflows" },
+  current: { workflows: [], invalid: [], dir: "/home/.zetacode/workflows" },
 };
 const runsResult: { current: ZCodeSavedWorkflowRun[] } = { current: [] };
 const agent = {
@@ -44,11 +44,11 @@ const agent = {
   listSavedWorkflowRuns: vi.fn(async () => ({ runs: runsResult.current })),
   deleteSavedWorkflow: vi.fn(async () => ({
     ok: true as const,
-    path: "/home/.zcode/workflows/x.dwf.ts",
+    path: "/home/.zetacode/workflows/x.dwf.ts",
   })),
   moveSavedWorkflow: vi.fn(async () => ({
     ok: true as const,
-    from: "/home/.zcode/workflows/x.dwf.ts",
+    from: "/home/.zetacode/workflows/x.dwf.ts",
     to: "/a/.zcode/workflows/x.dwf.ts",
   })),
   getSavedWorkflow: vi.fn(),
@@ -252,7 +252,7 @@ function entry(
     name,
     description: `${name} 的说明`,
     scope: "global",
-    path: `/home/.zcode/workflows/${name}.dwf.ts`,
+    path: `/home/.zetacode/workflows/${name}.dwf.ts`,
     ...overrides,
   };
 }
@@ -302,7 +302,7 @@ function mount(props: Partial<Parameters<typeof SavedWorkflowGlobalGroup>[0]> = 
 describe("SavedWorkflowGlobalGroup", () => {
   beforeEach(() => {
     resetSavedWorkflowStoreForTests();
-    listResult.current = { workflows: [], invalid: [], dir: "/home/.zcode/workflows" };
+    listResult.current = { workflows: [], invalid: [], dir: "/home/.zetacode/workflows" };
     runsResult.current = [];
     vi.clearAllMocks();
     confirmMock.mockResolvedValue(true);
@@ -334,7 +334,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     mount();
     await screen.findByTestId(testId(TID_WORKFLOWS_LIST, "global"));
@@ -354,7 +354,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     const { onCreateViaChat } = mount();
     await screen.findByTestId(testId(TID_WORKFLOW_CARD, "research"));
@@ -371,7 +371,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     const { onCreateViaChat } = mount({ localProjects: [], activeProjectKey: null });
     await screen.findByTestId(testId(TID_WORKFLOW_CARD, "research"));
@@ -389,7 +389,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     mount();
     await screen.findByTestId(testId(TID_WORKFLOW_CARD, "research"));
@@ -404,7 +404,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     const { onMoved } = mount();
     await screen.findByTestId(testId(TID_WORKFLOW_CARD, "research"));
@@ -424,7 +424,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     agent.moveSavedWorkflow.mockResolvedValueOnce({
       ok: false as const,
@@ -443,7 +443,7 @@ describe("SavedWorkflowGlobalGroup", () => {
     listResult.current = {
       workflows: [entry("research")],
       invalid: [],
-      dir: "/home/.zcode/workflows",
+      dir: "/home/.zetacode/workflows",
     };
     runsResult.current = [
       {

@@ -222,7 +222,7 @@ describe("反馈归档隐私边界", () => {
         sources: [
           {
             directory: source,
-            archivePrefix: ".zcode/cli",
+            archivePrefix: ".zetacode/cli",
             includeFileNames: ["config.json"],
             onlyCurrentDay: false,
             contentPolicy: "cli-config",

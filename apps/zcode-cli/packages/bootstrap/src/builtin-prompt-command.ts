@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import {
   BUILTIN_WORKFLOW_COMMAND_NAME,
   expandBuiltinWorkflowCommandPrompt,
@@ -101,7 +102,7 @@ function buildInitAgentsPrompt(params: {
     `- Instruction file: ${params.targetPath}`,
     `- Existing hidden instruction candidates: ${join(params.workingDirectory, ".zcode", "AGENTS.md")} and ${join(params.workingDirectory, ".agents", "AGENTS.md")}`,
     "- File name must be exactly AGENTS.md.",
-    "- This command targets the current workspace only. Do not write ~/.zcode/AGENTS.md.",
+    "- This command targets the current workspace only. Do not write ~/${ZCODE_DATA_DIR_NAME}/AGENTS.md.",
     additionalInstructions,
     "",
     "Process:",

@@ -7,6 +7,7 @@ import {
   resolveRuntimeZCodeEnv,
   ZCODE_APP_VERSION_ENV,
 } from "@zcode/shared";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import type { ModelProviderSourceTitle } from "./model-config.js";
 
 const ZCODE_DATA_BASE_DIR_ENV_KEY = "ZCODE_DATA_BASE_DIR";
@@ -47,7 +48,7 @@ function resolveClientTimezone(): string {
 
 function resolveTelemetryStateFile(env: NodeJS.ProcessEnv): string {
   const dataBaseDir = env[ZCODE_DATA_BASE_DIR_ENV_KEY]?.trim() || homedir();
-  return join(dataBaseDir, ".zcode", "v2", "telemetry-state.json");
+  return join(dataBaseDir, ZCODE_DATA_DIR_NAME, "v2", "telemetry-state.json");
 }
 
 async function readExistingDeviceMid(

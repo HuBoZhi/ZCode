@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -221,7 +222,7 @@ test("prepares beta CLI runtime env with beta storage root", () => {
     ["/usr/bin/node", "/workspace/bin/zcode.js"],
   );
 
-  assert.equal(env.ZCODE_STORAGE_DIR, join(homedir(), ".zcode-beta"));
+  assert.equal(env.ZCODE_STORAGE_DIR, join(homedir(), `${ZCODE_DATA_DIR_NAME}-beta`));
 });
 
 test("preserves explicit storage root when beta mode is enabled", () => {
@@ -989,8 +990,8 @@ test("zcode login runs OAuth flow without exposing tokens", async () => {
         poll_token: "poll-token",
       });
       return {
-        configPath: "/home/test/.zcode/v2/model-selection.json",
-        credentialsPath: "/home/test/.zcode/v2/credentials.json",
+        configPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/model-selection.json`,
+        credentialsPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/credentials.json`,
         model: "zai/glm-5.1",
         providerId: "zai",
         user: {
@@ -1009,7 +1010,7 @@ test("zcode login runs OAuth flow without exposing tokens", async () => {
   assert.match(ctx.stdout.output(), /Login successful as Alice/);
   assert.match(
     ctx.stdout.output(),
-    /Model selection: \/home\/test\/\.zcode\/v2\/model-selection\.json/,
+    new RegExp(`Model selection: /home/test/${ZCODE_DATA_DIR_NAME}/v2/model-selection\\.json`),
   );
   assert.doesNotMatch(ctx.stdout.output(), /access-token|jwt-token/);
 });
@@ -1022,7 +1023,7 @@ test("zcode logout clears shared OAuth credentials", async () => {
     logoutZCodeCli: async () => {
       logoutCalled = true;
       return {
-        credentialsPath: "/home/test/.zcode/v2/credentials.json",
+        credentialsPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/credentials.json`,
       };
     },
   });
@@ -1084,8 +1085,8 @@ test("command center handles login and logout locally", async () => {
         poll_interval_sec: 2,
       });
       return {
-        configPath: "/home/test/.zcode/v2/model-selection.json",
-        credentialsPath: "/home/test/.zcode/v2/credentials.json",
+        configPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/model-selection.json`,
+        credentialsPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/credentials.json`,
         model: "zai/glm-5.1",
         providerId: "zai",
         user: {
@@ -1098,7 +1099,7 @@ test("command center handles login and logout locally", async () => {
     configureApiKey: async (options) => {
       apiKeyCalled = options.providerId === "bigmodel" && options.apiKey === "manual-key";
       return {
-        configPath: "/home/test/.zcode/v2/model-selection.json",
+        configPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/model-selection.json`,
         model: "bigmodel/glm-5.1",
         providerId: "bigmodel",
       };
@@ -1106,7 +1107,7 @@ test("command center handles login and logout locally", async () => {
     logout: async () => {
       logoutCalled = true;
       return {
-        credentialsPath: "/home/test/.zcode/v2/credentials.json",
+        credentialsPath: `/home/test/${ZCODE_DATA_DIR_NAME}/v2/credentials.json`,
       };
     },
     resumeApp: async () => {
@@ -1147,7 +1148,7 @@ test("command center handles login and logout locally", async () => {
   assert.match(loginResult.response, /Configured Z\.AI Coding Plan as Alice/);
   assert.match(
     loginResult.response,
-    /Model selection: \/home\/test\/\.zcode\/v2\/model-selection\.json/,
+    new RegExp(`Model selection: /home/test/${ZCODE_DATA_DIR_NAME}/v2/model-selection\\.json`),
   );
   assert.match(apiKeyResult.response, /Configured BigModel Coding Plan/);
   assert.match(logoutResult.response, /Logged out from Coding Plan accounts/);

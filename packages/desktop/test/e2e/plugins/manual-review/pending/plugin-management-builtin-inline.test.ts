@@ -112,7 +112,7 @@ describe("PLM-LC-006/009 Builtin 抑制恢复与 inline smoke E2E", () => {
 
 async function seedBuiltinUserState(): Promise<void> {
   const { homeDir } = getE2EAppDataPaths();
-  const configPath = join(homeDir, ".zcode", "cli", "config.json");
+  const configPath = join(homeDir, ".zetacode", "cli", "config.json");
   const config = JSON.parse(await readFile(configPath, "utf-8")) as Record<string, unknown>;
   const plugins = isRecord(config.plugins) ? config.plugins : {};
   const options = isRecord(plugins.options) ? plugins.options : {};

@@ -110,7 +110,7 @@ describe("workspace hook Settings/Runtime discovery alignment", () => {
     const home = makeRoot();
     const workspace = makeRoot();
     mkdirSync(join(workspace, ".git"));
-    writeJson(join(home, ".zcode", "cli", "config.json"), {
+    writeJson(join(home, ".zetacode", "cli", "config.json"), {
       hooks: { enabled: true },
     });
     writeJson(join(workspace, ".zcode", "config.json"), {
@@ -132,7 +132,7 @@ describe("workspace hook Settings/Runtime discovery alignment", () => {
     // 修复原因：CR-01 后 trust store 使用完整 strict schema（单源在 shared 的
     // workspace-hook-trust-store-file.ts），record 必须包含全部必填字段；旧用例只写
     // identity+digest 恰好依赖了被修复的局部校验 bug，会被 fail-closed 判为 invalid。
-    writeJson(join(home, ".zcode", "security", "workspace-hook-trust-v1.json"), {
+    writeJson(join(home, ".zetacode", "security", "workspace-hook-trust-v1.json"), {
       schemaVersion: 1,
       records: [
         {
@@ -180,7 +180,7 @@ describe("workspace hook Settings/Runtime discovery alignment", () => {
       },
     });
 
-    writeJson(join(home, ".zcode", "cli", "config.json"), {
+    writeJson(join(home, ".zetacode", "cli", "config.json"), {
       hooks: { enabled: true, events: {} },
     });
     const enabled = await service.loadHooks({ workspacePath: workspace });
@@ -200,7 +200,7 @@ describe("workspace hook Settings/Runtime discovery alignment", () => {
 describe("workspace hook config atomic mutation", () => {
   it("temp file flush/close 后 atomic rename 成功提交完整 JSON", async () => {
     const root = makeRoot();
-    const path = join(root, ".zcode", "config.json");
+    const path = join(root, ".zetacode", "config.json");
     await atomicWriteWorkspaceHookConfig(path, {
       hooks: { enabled: true, events: {} },
     });
@@ -211,7 +211,7 @@ describe("workspace hook config atomic mutation", () => {
 
   it("rename 前失败时保留原文件且清理 temp file", async () => {
     const root = makeRoot();
-    const path = join(root, ".zcode", "config.json");
+    const path = join(root, ".zetacode", "config.json");
     writeJson(path, { hooks: { enabled: false, events: {} } });
 
     await expect(
@@ -229,7 +229,7 @@ describe("workspace hook config atomic mutation", () => {
     expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
       hooks: { enabled: false, events: {} },
     });
-    const entries = (await import("node:fs/promises")).readdir(join(root, ".zcode"));
+    const entries = (await import("node:fs/promises")).readdir(join(root, ".zetacode"));
     await expect(entries).resolves.toEqual(["config.json"]);
   });
 });

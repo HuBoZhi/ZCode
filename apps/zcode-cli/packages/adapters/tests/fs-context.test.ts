@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { describe, expect, it, vi } from "vitest";
 import { READ_MAX_FILE_SIZE_BYTES } from "@zcode/contracts";
 import { createNodeContextSourceAdapter } from "../src/context/index.js";
@@ -906,8 +907,8 @@ describe("Node file and context adapters", () => {
     try {
       await mkdir(nestedCwd, { recursive: true });
       await mkdir(join(workspace, ".git"));
-      await mkdir(join(home, ".zcode"), { recursive: true });
-      await writeFile(join(home, ".zcode", "AGENTS.md"), "default user instructions");
+      await mkdir(join(home, ZCODE_DATA_DIR_NAME), { recursive: true });
+      await writeFile(join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"), "default user instructions");
 
       const fallbackSnapshot = await adapter.resolveContextSources({
         workingDirectory: nestedCwd,
@@ -916,12 +917,12 @@ describe("Node file and context adapters", () => {
         },
       });
 
-      expect(fallbackSnapshot.userInstructions?.filePath).toBe(join(home, ".zcode", "AGENTS.md"));
+      expect(fallbackSnapshot.userInstructions?.filePath).toBe(join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"));
       expect(fallbackSnapshot.userInstructions?.content).toBe("default user instructions");
       expect(fallbackSnapshot.userInstructions?.sources).toEqual([
         expect.objectContaining({
           scope: "user",
-          filePath: join(home, ".zcode", "AGENTS.md"),
+          filePath: join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"),
           content: "default user instructions",
         }),
       ]);
@@ -941,7 +942,7 @@ describe("Node file and context adapters", () => {
       expect(projectSnapshot.userInstructions?.sources).toEqual([
         expect.objectContaining({
           scope: "user",
-          filePath: join(home, ".zcode", "AGENTS.md"),
+          filePath: join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"),
           content: "default user instructions",
         }),
         expect.objectContaining({
@@ -965,8 +966,8 @@ describe("Node file and context adapters", () => {
     try {
       await mkdir(workspace, { recursive: true });
       await mkdir(join(workspace, ".git"));
-      await mkdir(join(home, ".zcode"), { recursive: true });
-      await writeFile(join(home, ".zcode", "AGENTS.md"), "userprofile instructions");
+      await mkdir(join(home, ZCODE_DATA_DIR_NAME), { recursive: true });
+      await writeFile(join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"), "userprofile instructions");
 
       const snapshot = await adapter.resolveContextSources({
         workingDirectory: workspace,
@@ -975,7 +976,7 @@ describe("Node file and context adapters", () => {
         },
       });
 
-      expect(snapshot.userInstructions?.filePath).toBe(join(home, ".zcode", "AGENTS.md"));
+      expect(snapshot.userInstructions?.filePath).toBe(join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"));
       expect(snapshot.userInstructions?.content).toBe("userprofile instructions");
     } finally {
       await rm(home, { force: true, recursive: true });
@@ -992,8 +993,8 @@ describe("Node file and context adapters", () => {
     try {
       await mkdir(workspace, { recursive: true });
       await mkdir(join(workspace, ".git"));
-      await mkdir(join(home, ".zcode"), { recursive: true });
-      await writeFile(join(home, ".zcode", "AGENTS.md"), "default user instructions");
+      await mkdir(join(home, ZCODE_DATA_DIR_NAME), { recursive: true });
+      await writeFile(join(home, ZCODE_DATA_DIR_NAME, "AGENTS.md"), "default user instructions");
 
       const snapshot = await adapter.resolveContextSources({
         workingDirectory: workspace,

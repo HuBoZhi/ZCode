@@ -1,5 +1,12 @@
 export type ZCodeAgentBinaryKind = "native-binary";
 
+/**
+ * 全局数据根目录名（fork：ZetaCode 用 .zetacode，官方为 .zcode）。
+ * 拼在 dataBaseDir（默认 home）下；workspace 级 项目/.zcode/ 目录跟项目走，不使用本常量。
+ * 规则见 specs/fork-data-root-isolation.md；合并上游时保留 fork 值。
+ */
+export const ZCODE_DATA_DIR_NAME = ".zetacode";
+
 export interface ZCodeAgentRuntimeDescriptor {
   binaryKind: ZCodeAgentBinaryKind;
   binaryEnvVar: string;
@@ -29,7 +36,7 @@ export const ZCODE_AGENT_RUNTIME: ZCodeAgentRuntimeDescriptor = {
   bundledResourceDir: "glm",
   version: "0.13.3",
   spawnArgs: ["app-server", "--stdio"],
-  nativeConfigDir: ".zcode/cli",
+  nativeConfigDir: `${ZCODE_DATA_DIR_NAME}/cli`,
   nativeConfigFileName: "config.json",
   missingBinaryMessage:
     "[ZCode Agent] glm binary 未找到，请设置 ZCODE_AGENT_WORKDIR、GLM_BINARY_PATH 或先准备 GLM 运行时资源",

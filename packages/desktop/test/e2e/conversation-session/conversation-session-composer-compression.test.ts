@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { NodePersonalProviderConfigRepository } from "@zcode/provider-node";
@@ -197,7 +198,7 @@ describe("Composer 七档压缩", () => {
             localePreference: "zh-CN",
           }),
         );
-        const configFile = join(paths.homeDir, ".zcode", "cli", "config.json");
+        const configFile = join(paths.homeDir, ZCODE_DATA_DIR_NAME, "cli", "config.json");
         const config = JSON.parse(
           await readFile(configFile, "utf8").catch((error: NodeJS.ErrnoException) => {
             if (error.code === "ENOENT") return "{}";

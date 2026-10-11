@@ -15,6 +15,9 @@
 - 运行时应用名（`desktopRuntimeEnv.ts` 的 `runtimeApplicationName`）默认值为 ZetaCode / ZetaCode Preview / ZetaCode Dev（dev 态），可由 `ZCODE_DESKTOP_APPLICATION_NAME` 覆盖（e2e 用）。
 - userData / sessionData 目录由 `runtimeApplicationName` 派生（Roaming 下同名目录），因此 fork 与官方安装天然隔离。
 - Windows 资源管理器右键菜单使用独立注册表键 `ZetaCode.OpenInZetaCode`，不与官方 `ZCode.OpenInZCode` 键互相覆盖。
+- 窗口标题（任务栏悬浮预览、Alt+Tab 显示名）：主窗口 `BrowserWindow` 的 `title` 为空，实际标题由 renderer HTML 的 `<title>` 提供（页面加载后 `document.title` 覆盖空标题）。所有 renderer HTML 的 `<title>` 与运行时写入的 `document.title`（如 CUA 权限浮窗文案）一律以 ZetaCode 品牌开头，不得残留旧 `ZCode` 品牌。
+
+- **全局数据根品牌隔离**：运行时数据根目录名为 `.zetacode`（常量 `ZCODE_DATA_DIR_NAME`，权威定义在 `packages/shared/src/zcode-agent-runtime.ts`），与官方 ZCode 的 `~/.zcode` 互不可见；首次启动做一次性快照迁移。规则与验收见 [fork-data-root-isolation.md](./fork-data-root-isolation.md)。
 
 ## 刻意不改的部分
 

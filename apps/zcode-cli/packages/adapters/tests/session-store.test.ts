@@ -1,4 +1,5 @@
 import { fork } from "node:child_process";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { mkdtemp, rm } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -379,7 +380,7 @@ describe("SQLite session store", () => {
   });
 
   it("defaults the session database under the db directory", () => {
-    expect(getDefaultSessionDbPath()).toBe(join(homedir(), ".zcode", "cli", "db", "db.sqlite"));
+    expect(getDefaultSessionDbPath()).toBe(join(homedir(), ZCODE_DATA_DIR_NAME, "cli", "db", "db.sqlite"));
   });
 
   it("keeps the existing in-memory session store path working", () => {

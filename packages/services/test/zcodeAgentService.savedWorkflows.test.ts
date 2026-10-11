@@ -245,7 +245,7 @@ describe("ZCodeAgentService moveSavedWorkflow", () => {
       if (method === zcodeProtocolMethods.workflowsMove) {
         return {
           ok: true,
-          from: "/home/.zcode/workflows/x.dwf.ts",
+          from: "/home/.zetacode/workflows/x.dwf.ts",
           to: "/repo/.zcode/workflows/x.dwf.ts",
         };
       }
@@ -255,7 +255,7 @@ describe("ZCodeAgentService moveSavedWorkflow", () => {
     await expect(service.moveSavedWorkflow({ workspacePath: "/repo", name: "x" })).resolves.toEqual(
       {
         ok: true,
-        from: "/home/.zcode/workflows/x.dwf.ts",
+        from: "/home/.zetacode/workflows/x.dwf.ts",
         to: "/repo/.zcode/workflows/x.dwf.ts",
       },
     );

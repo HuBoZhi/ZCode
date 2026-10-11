@@ -1,5 +1,6 @@
 import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import {
   TID_AUTOMATIONS_OPEN,
   TID_AUTOMATIONS_PAGE_TAB,
@@ -219,7 +220,7 @@ describe("已保存工作流中枢 E2E", () => {
 // 因此 agent 的 os.homedir() 解析到这里，全局根 = `<E2E_HOME>/.zcode/workflows/`。
 const E2E_HOME = dirname(DEFAULT_WORKSPACE);
 const GLOBAL_WORKFLOW_NAME = "global-note";
-const GLOBAL_WORKFLOWS_DIR = join(E2E_HOME, ".zcode", "workflows");
+const GLOBAL_WORKFLOWS_DIR = join(E2E_HOME, ZCODE_DATA_DIR_NAME, "workflows");
 const GLOBAL_WORKFLOW_FILE = join(GLOBAL_WORKFLOWS_DIR, `${GLOBAL_WORKFLOW_NAME}.dwf.ts`);
 const GLOBAL_PROJECT_WORKFLOWS_DIR = join(DEFAULT_WORKSPACE, ".zcode", "workflows");
 const GLOBAL_PROJECT_WORKFLOW_FILE = join(

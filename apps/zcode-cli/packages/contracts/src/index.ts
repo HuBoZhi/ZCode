@@ -94,6 +94,9 @@ export * from "./network/public-egress-ip.js";
 export * from "./tools/index.js";
 export * from "./tools/websearch.js";
 
+// fork 数据根目录名：权威在 @zcode/shared，这里转发给未直依赖 shared 的 CLI 包（如 telemetry）。
+export { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
+
 // 媒体预算上限由 App/Agent 共用策略定义；Contracts 统一转出，避免 Core 各处跨层取值。
 export {
   MEDIA_BUDGET_CURRENT_ATTACHMENT_TOO_LARGE_ERROR_CODE,
