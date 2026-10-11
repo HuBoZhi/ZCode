@@ -2464,7 +2464,7 @@ const zhCN: Record<string, string> = {
     "重置卡剩余有效期不足 30 分钟时自动使用，避免过期作废；仅在本应用运行期间生效。",
   "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted": "5 小时额度耗尽时自动用卡续跑",
   "settings.codingPlanQuotaResetAutoUseOnFiveHourExhaustedDescription":
-    "任务因 5 小时额度耗尽停止时，自动使用 5 小时重置卡并继续任务（即使周额度尚有余额）。",
+    "任务因 5 小时额度耗尽停止且周额度尚有余额时，自动使用 5 小时重置卡并继续任务；周额度也已耗尽时先处理周额度，无周重置卡则不使用 5 小时卡（重置了也无法继续）。",
   "settings.codingPlanQuotaResetAutoUseOnWeekExhausted": "周额度耗尽时自动用卡续跑",
   "settings.codingPlanQuotaResetAutoUseOnWeekExhaustedDescription":
     "任务因周额度耗尽停止时，自动使用周重置卡并继续任务。",

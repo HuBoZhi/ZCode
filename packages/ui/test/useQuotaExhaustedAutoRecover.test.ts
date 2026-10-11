@@ -1,21 +1,15 @@
 // @vitest-environment jsdom
 // 额度耗尽自动核销并续跑（spec：specs/coding-plan-quota-reset-auto-use.md v2）：
 // quota_exhausted 错误 + 对应档位剩余 0% + 有对应卡 → 自动核销并重发最后一条真实用户输入。
+// 5 小时卡额外要求周额度尚有余额：周额度归零时重置 5 小时窗口无法续跑，不烧卡。
 
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUILTIN_MODEL_PROVIDER_IDS } from "@zcode/shared";
-import type {
-  IBroadcastService,
-  ISettingService,
-  IUsageStatsService,
-} from "@zcode/services";
+import type { IBroadcastService, ISettingService, IUsageStatsService } from "@zcode/services";
 import type { CodingPlanResetStatusSnapshot } from "@zcode/shared";
-import type {
-  ConversationRow,
-  SessionErrorInfo,
-} from "@zcode/shared/zcode-protocol-v4";
+import type { ConversationRow, SessionErrorInfo } from "@zcode/shared/zcode-protocol-v4";
 import { StoreProvider } from "@/store/StoreProvider.js";
 
 const mocks = vi.hoisted(() => ({
@@ -59,11 +53,7 @@ const storeBroadcastService = {
 const PROVIDER_ID = BUILTIN_MODEL_PROVIDER_IDS.bigmodelIndividualCodingPlan;
 
 function wrapper({ children }: { children: ReactNode }) {
-  return createElement(
-    StoreProvider,
-    { broadcastService: storeBroadcastService },
-    children,
-  );
+  return createElement(StoreProvider, { broadcastService: storeBroadcastService }, children);
 }
 
 function status(
@@ -79,9 +69,7 @@ function status(
   };
 }
 
-function createUsageStatsService(
-  overrides: Partial<IUsageStatsService> = {},
-): IUsageStatsService {
+function createUsageStatsService(overrides: Partial<IUsageStatsService> = {}): IUsageStatsService {
   return {
     getAppUsageSnapshot: vi.fn(),
     getCodingPlanUsageSnapshot: vi.fn(),
@@ -98,9 +86,7 @@ function createUsageStatsService(
   } as IUsageStatsService;
 }
 
-function createSettingService(
-  settings: Record<string, unknown> = {},
-): ISettingService {
+function createSettingService(settings: Record<string, unknown> = {}): ISettingService {
   return {
     get: vi.fn(async () => settings),
     update: vi.fn(async () => undefined),
@@ -141,10 +127,15 @@ function userInputRow(text: string, epilogueStart?: number): ConversationRow {
   } as unknown as ConversationRow;
 }
 
-/** 已用占比 100 → 剩余 0%（getQuotaRemainingPercentage 反转 percentage）。 */
+/**
+ * 已用占比 100 → 剩余 0%（getQuotaRemainingPercentage 反转 percentage）。
+ * weekUsedPercent 传 null 表示快照缺失周档 limit。
+ */
 function exhaustedEntitlementSnapshot(
-  overrides: { fiveHourUsedPercent?: number; weekUsedPercent?: number } = {},
+  overrides: { fiveHourUsedPercent?: number; weekUsedPercent?: number | null } = {},
 ): { quota: { limits: unknown[] } } {
+  // null 表示周档缺失，不能被默认值覆盖，否则缺失场景会误测成周额度耗尽。
+  const weekUsedPercent = overrides.weekUsedPercent === undefined ? 100 : overrides.weekUsedPercent;
   return {
     quota: {
       limits: [
@@ -155,12 +146,16 @@ function exhaustedEntitlementSnapshot(
           percentage: overrides.fiveHourUsedPercent ?? 100,
           usageDetails: [],
         },
-        {
-          type: "TOKENS_LIMIT",
-          unit: 6,
-          percentage: overrides.weekUsedPercent ?? 100,
-          usageDetails: [],
-        },
+        ...(weekUsedPercent === null
+          ? []
+          : [
+              {
+                type: "TOKENS_LIMIT",
+                unit: 6,
+                percentage: weekUsedPercent,
+                usageDetails: [],
+              },
+            ]),
       ],
     },
   } as never;
@@ -197,7 +192,8 @@ function setup(params: {
   const claimBroadcast = createClaimBroadcastService();
 
   mocks.entitlement = {
-    snapshot: params.entitlementSnapshot ?? exhaustedEntitlementSnapshot(),
+    // 默认前提：5 小时档耗尽 + 周档尚有余额（spec v2：周额度无余额时不烧 5 小时卡）。
+    snapshot: params.entitlementSnapshot ?? exhaustedEntitlementSnapshot({ weekUsedPercent: 30 }),
     loading: false,
     error: null,
     refresh: vi.fn(async () => undefined),
@@ -236,7 +232,7 @@ describe("useQuotaExhaustedAutoRecover", () => {
     mocks.services = null;
   });
 
-  it("5 小时额度耗尽 + 有 5 小时卡 → 自动核销并重发最后一条真实用户输入", async () => {
+  it("5 小时额度耗尽 + 周额度尚有余额 + 有 5 小时卡 → 自动核销并重发最后一条真实用户输入", async () => {
     const { useCodingPlanReset } = setup({
       lastError: quotaError(),
       rows: [userInputRow("第一条指令"), userInputRow("继续跑长任务")],
@@ -244,15 +240,10 @@ describe("useQuotaExhaustedAutoRecover", () => {
 
     await waitFor(() => expect(useCodingPlanReset).toHaveBeenCalledTimes(1));
     expect(useCodingPlanReset.mock.calls[0]?.[0]?.resetType).toBe("FIVE_HOUR");
-    await waitFor(() =>
-      expect(mocks.sendText).toHaveBeenCalledWith("继续跑长任务"),
-    );
-    expect(mocks.toast).toHaveBeenCalledWith(
-      "codingPlan.quotaReset.autoUsedAndResumed",
-      {
-        variant: "info",
-      },
-    );
+    await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith("继续跑长任务"));
+    expect(mocks.toast).toHaveBeenCalledWith("codingPlan.quotaReset.autoUsedAndResumed", {
+      variant: "info",
+    });
   });
 
   it("重发文本裁掉引擎附加尾注（epilogueStart）", async () => {
@@ -262,9 +253,7 @@ describe("useQuotaExhaustedAutoRecover", () => {
     });
 
     await waitFor(() => expect(useCodingPlanReset).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(mocks.sendText).toHaveBeenCalledWith("跑构建任务"),
-    );
+    await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith("跑构建任务"));
   });
 
   it("仅周额度耗尽 + 有周卡 → 核销 WEEK", async () => {
@@ -315,9 +304,95 @@ describe("useQuotaExhaustedAutoRecover", () => {
 
     await waitFor(() => expect(useCodingPlanReset).toHaveBeenCalledTimes(1));
     expect(useCodingPlanReset.mock.calls[0]?.[0]?.resetType).toBe("WEEK");
-    await waitFor(() =>
-      expect(mocks.sendText).toHaveBeenCalledWith("周额度耗尽场景"),
+    await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith("周额度耗尽场景"));
+  });
+
+  it("两档同时耗尽 + 有周卡 → 先核销 WEEK，不先烧 5 小时卡", async () => {
+    const expiresAt = Date.now() + 60 * 60_000;
+    let weekUsedAt: number | null = null;
+    const getCodingPlanResetStatus = vi.fn(async () =>
+      weekUsedAt === null
+        ? status({
+            availableFiveHourResets: [{ expireAt: expiresAt }],
+            availableWeekResets: [{ expireAt: expiresAt }],
+          })
+        : status({
+            latestWeekResetHistory: { usedAt: weekUsedAt },
+            hasUnreadHistory: true,
+            availableFiveHourResets: [{ expireAt: expiresAt }],
+          }),
     );
+    const useCodingPlanReset = vi.fn(async () => {
+      weekUsedAt = Date.now();
+      return { used: true as const };
+    }) as IUsageStatsService["useCodingPlanReset"];
+    const claimBroadcast = createClaimBroadcastService();
+    mocks.entitlement = {
+      // 两档都耗尽：FIVE_HOUR 因周额度无余额被排除，WEEK 是唯一候选。
+      snapshot: exhaustedEntitlementSnapshot(),
+      loading: false,
+      error: null,
+      refresh: vi.fn(async () => undefined),
+    };
+    mocks.services = {
+      usageStatsService: createUsageStatsService({
+        getCodingPlanResetStatus,
+        useCodingPlanReset,
+      }),
+      settingService: createSettingService(),
+      broadcastService: claimBroadcast as unknown as IBroadcastService,
+    };
+
+    renderHook(
+      () =>
+        useQuotaExhaustedAutoRecover({
+          sessionId: "session-both-week-first",
+          lastError: quotaError(),
+          providerId: PROVIDER_ID,
+          rowsWindow: [userInputRow("两档同时耗尽")],
+          sendText: mocks.sendText,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(useCodingPlanReset).toHaveBeenCalledTimes(1));
+    expect(useCodingPlanReset.mock.calls[0]?.[0]?.resetType).toBe("WEEK");
+    await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith("两档同时耗尽"));
+  });
+
+  it("两档同时耗尽 + 无周卡 → 不核销 5 小时卡（重置了也无法续跑）", async () => {
+    const { useCodingPlanReset, getCodingPlanResetStatus } = setup({
+      lastError: quotaError(),
+      rows: [userInputRow("不应烧卡")],
+      // 两档都耗尽，默认快照只有 5 小时卡（setup 只发放 FIVE_HOUR 机会）。
+      entitlementSnapshot: exhaustedEntitlementSnapshot(),
+    });
+
+    await waitFor(() => expect(getCodingPlanResetStatus).toHaveBeenCalled());
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    expect(useCodingPlanReset).not.toHaveBeenCalled();
+    expect(mocks.sendText).not.toHaveBeenCalled();
+  });
+
+  it("5 小时耗尽 + 周档剩余数据缺失 → 保守不烧 5 小时卡", async () => {
+    const entitlementSnapshot = exhaustedEntitlementSnapshot({
+      weekUsedPercent: null,
+    });
+    expect(entitlementSnapshot.quota.limits).toHaveLength(1);
+    const { useCodingPlanReset, getCodingPlanResetStatus } = setup({
+      lastError: quotaError(),
+      rows: [userInputRow("周档数据缺失")],
+      entitlementSnapshot,
+    });
+
+    await waitFor(() => expect(getCodingPlanResetStatus).toHaveBeenCalled());
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    expect(useCodingPlanReset).not.toHaveBeenCalled();
+    expect(mocks.sendText).not.toHaveBeenCalled();
   });
 
   it("5 小时档开关关闭 → 不核销不重发", async () => {
@@ -385,10 +460,7 @@ describe("useQuotaExhaustedAutoRecover", () => {
     const getCodingPlanResetStatus = vi.fn(async () =>
       usedAt === null
         ? status({
-            availableFiveHourResets: [
-              { expireAt: expiresAt },
-              { expireAt: expiresAt + 1 },
-            ],
+            availableFiveHourResets: [{ expireAt: expiresAt }, { expireAt: expiresAt + 1 }],
           })
         : status({
             latestFiveHourResetHistory: { usedAt },
@@ -401,7 +473,7 @@ describe("useQuotaExhaustedAutoRecover", () => {
       return { used: true as const };
     }) as IUsageStatsService["useCodingPlanReset"];
     mocks.entitlement = {
-      snapshot: exhaustedEntitlementSnapshot(),
+      snapshot: exhaustedEntitlementSnapshot({ weekUsedPercent: 30 }),
       loading: false,
       error: null,
       refresh: vi.fn(async () => undefined),
@@ -412,8 +484,7 @@ describe("useQuotaExhaustedAutoRecover", () => {
         useCodingPlanReset,
       }),
       settingService: createSettingService(),
-      broadcastService:
-        createClaimBroadcastService() as unknown as IBroadcastService,
+      broadcastService: createClaimBroadcastService() as unknown as IBroadcastService,
     };
     // sendText 抛错模拟重发失败；同一错误不应再次核销。
     mocks.sendText.mockImplementationOnce(async () => {

@@ -2620,7 +2620,7 @@ const enUS: Record<string, string> = {
   "settings.codingPlanQuotaResetAutoUseOnFiveHourExhausted":
     "Auto-use 5-hour reset when exhausted",
   "settings.codingPlanQuotaResetAutoUseOnFiveHourExhaustedDescription":
-    "When a task stops because the 5-hour quota is exhausted, automatically use a 5-hour reset and resume the task (even if weekly quota remains).",
+    "When a task stops because the 5-hour quota is exhausted and weekly quota still remains, automatically use a 5-hour reset and resume the task. If weekly quota is also exhausted, the weekly side is handled first; without a weekly reset card the 5-hour card is not used (resetting alone cannot resume the task).",
   "settings.codingPlanQuotaResetAutoUseOnWeekExhausted": "Auto-use weekly reset when exhausted",
   "settings.codingPlanQuotaResetAutoUseOnWeekExhaustedDescription":
     "When a task stops because the weekly quota is exhausted, automatically use a weekly reset and resume the task.",

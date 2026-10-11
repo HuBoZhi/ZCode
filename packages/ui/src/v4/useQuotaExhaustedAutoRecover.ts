@@ -27,8 +27,9 @@ import {
  * 额度耗尽自动核销并续跑（spec：specs/coding-plan-quota-reset-auto-use.md v2）。
  *
  * 任务因额度耗尽（provider 业务码归因 quota_exhausted）停止时：
- * 1. 按耗尽档位（5 小时优先于周）自动核销对应重置卡（复用唯一执行通道，claim/attempts
- *    与临期触发源互斥共享）；
+ * 1. 按耗尽档位自动核销对应重置卡（复用唯一执行通道，claim/attempts 与临期触发源互斥
+ *    共享）。周额度是外层约束：FIVE_HOUR 仅在周额度尚有余额时核销——周额度归零时单独
+ *    重置 5 小时窗口无法续跑；两档同时耗尽时 WEEK 优先，无周卡则不核销，避免浪费。
  * 2. 核销成功后取最后一条真实用户输入（裁掉引擎附加尾注）经正常发送通道重发，admission
  *    语义与用户手动发送完全一致。
  * 同一 errorKey 只自动恢复一次；非额度错误、无对应卡、开关关闭均不动，交给现有提示与手动路径。
@@ -88,6 +89,11 @@ function resolveTokenLimitRemainingPercentages(
 /** 剩余恰为 0% 才视为耗尽；数据缺失（null）不触发，避免误烧卡。 */
 function isLimitExhausted(remainingPercent: number | null): boolean {
   return remainingPercent === 0;
+}
+
+/** 周额度是否尚有余额；数据缺失（null）视为无法确认，返回 false 以保守不烧卡。 */
+function hasRemainingBalance(remainingPercent: number | null): boolean {
+  return remainingPercent !== null && remainingPercent > 0;
 }
 
 /** 最后一条真实用户输入的待重发文本；裁掉引擎附加尾注，裁剪后为空则不可重发。 */
@@ -285,16 +291,21 @@ export function useQuotaExhaustedAutoRecover(params: {
     const remaining = resolveTokenLimitRemainingPercentages(
       entitlement.snapshot,
     );
-    // 5 小时档优先：它的窗口更短，通常也是第一道限流；周档在同一次评估里只在
-    // 5 小时档未耗尽/无卡时兜底，两档同时耗尽时靠重发后的新错误再评估第二张。
+    // 周档是外层约束：周额度无余额时单独重置 5 小时窗口无法续跑，会白烧一张 5 小时卡，
+    // 因此 FIVE_HOUR 仅在周额度确认尚有余额时才是候选（数据缺失视为无法确认，不烧）。
+    // 两档同时耗尽时 WEEK 优先：先核销周卡；若 5 小时档仍挡路，靠重发后的新错误再评估。
     const candidates: Array<"FIVE_HOUR" | "WEEK"> = [];
     const fiveHourEntryUsable = resetUi.opportunityVisible;
     const weekEntryUsable = resetUi.week.opportunityVisible;
-    if (isLimitExhausted(remaining.fiveHour) && fiveHourEntryUsable) {
-      candidates.push("FIVE_HOUR");
-    }
     if (isLimitExhausted(remaining.week) && weekEntryUsable) {
       candidates.push("WEEK");
+    }
+    if (
+      isLimitExhausted(remaining.fiveHour) &&
+      fiveHourEntryUsable &&
+      hasRemainingBalance(remaining.week)
+    ) {
+      candidates.push("FIVE_HOUR");
     }
     if (candidates.length === 0) {
       return;

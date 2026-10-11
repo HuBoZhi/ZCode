@@ -5,13 +5,17 @@
 任务运行中因额度耗尽（GLM 业务码归因 `quota_exhausted`：1304/1308/1310/1313–1321）而停止时，
 立即核销对应类型的重置卡并自动重发最后一条真实用户输入，让任务继续：
 
-- **5 小时额度耗尽**（entitlement `TOKENS_LIMIT` unit=3 number=5 剩余 0%）且有 FIVE_HOUR 卡
-  → 自动核销。开关 `codingPlanQuotaResetAutoUseOnFiveHourExhausted`（默认开）——用户可决定
-  「5 小时没了但周额度还在时」是否也立即烧 5 小时卡。
+- **5 小时额度耗尽**（entitlement `TOKENS_LIMIT` unit=3 number=5 剩余 0%）且有 FIVE_HOUR 卡，
+  **且周额度尚有余额**（unit=6 剩余 > 0%）→ 自动核销。开关
+  `codingPlanQuotaResetAutoUseOnFiveHourExhausted`（默认开）——用户可决定
+  「5 小时没了但周额度还在时」是否也立即烧 5 小时卡。周额度是外层约束：剩余为 0 时
+  单独重置 5 小时窗口无法续跑，重置卡会被浪费，因此不核销（周档剩余数据缺失也视为
+  无法确认余额，同样不烧）。
 - **周额度耗尽**（`TOKENS_LIMIT` unit=6 剩余 0%）且有 WEEK 卡 → 自动核销。
   开关 `codingPlanQuotaResetAutoUseOnWeekExhausted`（默认开）。
-- 两档同时耗尽时按 FIVE_HOUR 优先逐张处理；核销 + 重发后若再遇额度错误（新 errorKey），
-  按同一规则再评估（同一 errorKey 只自动恢复一次，防止无限烧卡循环）。
+- 两档同时耗尽时按 **WEEK 优先**：先核销周卡并重发；若 5 小时档仍挡路（新 errorKey，
+  且周额度已恢复余额），再按上一条规则核销 FIVE_HOUR。两档同时耗尽且无 WEEK 卡时
+  不核销任何卡（同 errorKey 只自动恢复一次，防止无限烧卡循环）。
 - **自动续跑**：核销成功后取会话 rows 中最后一条 `origin === "realUser"` 的 `userInput` 行
   文本（按 `epilogueStart` 裁掉引擎附加尾注），经 SessionPane 正常发送通道重发，admission
   语义（排队/立即发送/权限）与用户手动发送完全一致。
@@ -68,9 +72,12 @@ status 轮询对账 → entry: available { opportunityCount>0, opportunityExpire
 
 ### v2（额度耗尽续跑）
 
-8. 5 小时额度耗尽错误 + 有 5 小时卡 + 开关开 → 自动 `/use` FIVE_HOUR + 重发最后一条真实用户输入。
+8. 5 小时额度耗尽错误 + 周额度尚有余额 + 有 5 小时卡 + 开关开 → 自动 `/use` FIVE_HOUR + 重发最后一条真实用户输入。
 9. 周额度耗尽 + 有周卡 + 开关开 → 自动核销 WEEK；对应开关关闭 → 不动。
 10. 5 小时耗尽但对应开关关（用户不想在周额度还有时烧 5h 卡）→ 不核销，仅提示。
+10a. 两档同时耗尽 + 有周卡 → 先核销 WEEK（不先烧 5 小时卡）；重发后 5 小时档仍耗尽时按规则 8 再核销 FIVE_HOUR。
+10b. 两档同时耗尽 + 无周卡 → 不核销 FIVE_HOUR：重置 5 小时窗口也无法续跑，白烧一张卡。
+10c. 5 小时耗尽 + 周档剩余数据缺失（无 unit=6 limit）→ 视为无法确认余额，不烧 5 小时卡。
 11. 同一 errorKey 只自动恢复一次；重发后再次额度耗尽（新 errorKey）→ 重新评估。
 12. `lastError` 非额度类（如套餐过期 1309、无权限 1311）→ 不核销。
 13. 无对应类型的卡 → 不动作（现有 banner/手动路径兜底）。
