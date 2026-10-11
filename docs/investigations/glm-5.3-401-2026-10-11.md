@@ -158,3 +158,16 @@ sequenceDiagram
 - 使用 ZetaCode 自带 Electron/Node，在内存中加载该新产物的模型执行器及默认路由工厂，使用当前 OAuth 按 3.15.1 换到 PAT：最终 URL 为 BigModel messages，两种鉴权头均与 PAT 一致，GLM-5.3 返回 200，SSE 消费完成（37 chunks）。没有修改已安装 bundle 或启动用户会话。
 
 源码和桌面 Agent 产物已修复；`D:/Program Files/ZetaCode` 中原安装包仍为旧产物，需更新安装包后再启动才能应用修复。既有其他本地修改未恢复或纳入本次修复。
+
+## 提交与推送检查记录
+
+用户随后要求提交所有适合入库的改动；周额度优先重置、bootstrap import 语法修正与 Windows 本机部署文档分别提交，既有品牌和数据目录迁移提交一并推送。
+
+第一次 `git push origin dev` 的 pre-push 钩子未通过：lint 为 0 errors / 66 warnings，架构检查为 0 违规，但 affected 单测包含文件监听恢复断言和 Windows 进程回收失败。不能将整套推送检查报告为通过。
+
+- 单独重跑 `subagentRuntimeConfigWatcher.test.ts` 与 `zcodeAgentProcessManager.test.ts`：监听文件通过；进程管理文件 46 个测试通过、2 个失败，失败为首轮回收重试与 expanded 异常上报用例的 cleanup。
+- 再单独重跑进程管理文件：46 个通过、2 个失败，失败改为 protocol close 回收与 app quit 重试。
+- 两轮均在 `ZCodeStdioTransport.disposeAndWaitOnce` 报告 `runtime process tree cleanup incomplete`。日志含 Windows `taskkill` 超时或截止时仍有残留 PID；失败项随运行变化，环境时序因素尚未完成归因。
+- 与 `origin/dev` 比较，`packages/services/src/process/` 与 `zcodeStdioTransport.ts` 无改动；进程管理测试仅修改了品牌数据路径及对应注释，失败用例未改动。该检查失败不属于本次 401 路由修复。
+
+用户明确授权「允许本次跳过钩子并推送」。本次推送按此授权跳过 pre-push，保留上述失败记录；Windows 进程回收问题仍待单独处理。
