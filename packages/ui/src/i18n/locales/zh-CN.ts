@@ -2459,6 +2459,9 @@ const zhCN: Record<string, string> = {
   "settings.modelIoFullRetention": "完整保留模型 I/O",
   "settings.modelIoFullRetentionDescription":
     "保留完整的模型请求和响应，不自动压缩、限制大小或删除旧记录。",
+  "settings.codingPlanQuotaResetAutoUse": "临期自动使用重置卡",
+  "settings.codingPlanQuotaResetAutoUseDescription":
+    "重置卡剩余有效期不足 30 分钟时自动使用，避免过期作废；仅在本应用运行期间生效。",
   "settings.performanceMode": "性能模式",
   "settings.performanceModeDescription": "精简渲染输出，提高性能。",
   "settings.taskAutoArchive": "自动归档旧任务",
@@ -3635,6 +3638,7 @@ const zhCN: Record<string, string> = {
   "codingPlan.quotaReset.resetAriaWeek": "重置周额度",
   "codingPlan.quotaReset.success": "重置成功",
   "codingPlan.quotaReset.failed": "重置失败，请重试",
+  "codingPlan.quotaReset.autoUsed": "已自动使用临期重置卡，额度已恢复",
   "codingPlan.quotaReset.processing": "正在重置 5 小时额度…",
   "codingPlan.quotaReset.processingWeek": "正在重置周额度…",
   "codingPlan.quotaReset.done": "5 小时额度已重置",

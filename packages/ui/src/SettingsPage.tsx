@@ -735,6 +735,9 @@ export function SettingsPage({
   const askUserQuestionAutoResolutionEnabled =
     sharedSettings?.askUserQuestionAutoResolutionEnabled !== false;
   const modelIoFullRetentionEnabled = sharedSettings?.modelIoFullRetentionEnabled === true;
+  // 重置卡临期自动核销默认开启（spec：specs/coding-plan-quota-reset-auto-use.md）。
+  const codingPlanQuotaResetAutoUseEnabled =
+    sharedSettings?.codingPlanQuotaResetAutoUseEnabled !== false;
   const [dataBaseDir, setDataBaseDir] = useState("");
   const [terminalInheritSystemProfile, setTerminalInheritSystemProfile] = useState(true);
   const [terminalFontFamily, setTerminalFontFamily] = useState("");
@@ -967,6 +970,21 @@ export function SettingsPage({
         action: "toggle_model_io_retention",
         trigger: "switch",
         operation: () => updateSharedSettings({ modelIoFullRetentionEnabled: enabled }),
+        completed: {
+          resultSource: "shared_settings",
+          stateAfter: enabled ? "enabled" : "disabled",
+        },
+      });
+    },
+    [updateSharedSettings],
+  );
+  const handleCodingPlanQuotaResetAutoUseEnabledChange = useCallback(
+    async (enabled: boolean) => {
+      await runSettingsActionAsync({
+        featureId: "settings.conversation",
+        action: "toggle_coding_plan_quota_reset_auto_use",
+        trigger: "switch",
+        operation: () => updateSharedSettings({ codingPlanQuotaResetAutoUseEnabled: enabled }),
         completed: {
           resultSource: "shared_settings",
           stateAfter: enabled ? "enabled" : "disabled",
@@ -1776,6 +1794,7 @@ export function SettingsPage({
                               askUserQuestionAutoResolutionEnabled
                             }
                             modelIoFullRetentionEnabled={modelIoFullRetentionEnabled}
+                            codingPlanQuotaResetAutoUseEnabled={codingPlanQuotaResetAutoUseEnabled}
                             onDataBaseDirChange={handleDataBaseDirChange}
                             onSelectDataBaseDir={selectDirectory}
                             onTerminalInheritSystemProfileChange={
@@ -1788,6 +1807,9 @@ export function SettingsPage({
                             }
                             onModelIoFullRetentionEnabledChange={
                               handleModelIoFullRetentionEnabledChange
+                            }
+                            onCodingPlanQuotaResetAutoUseEnabledChange={
+                              handleCodingPlanQuotaResetAutoUseEnabledChange
                             }
                             onHttpProxyChange={handleHttpProxyChange}
                             onHttpProxyNoProxyChange={handleHttpProxyNoProxyChange}

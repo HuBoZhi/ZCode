@@ -85,6 +85,7 @@ export function GeneralSectionContent({
   zcodeInteractionBehavior,
   askUserQuestionAutoResolutionEnabled = true,
   modelIoFullRetentionEnabled = false,
+  codingPlanQuotaResetAutoUseEnabled = true,
   onDataBaseDirChange,
   onSelectDataBaseDir,
   onTerminalInheritSystemProfileChange = async () => {},
@@ -109,6 +110,7 @@ export function GeneralSectionContent({
   onZCodeInteractionBehaviorChange,
   onAskUserQuestionAutoResolutionEnabledChange = async () => {},
   onModelIoFullRetentionEnabledChange = async () => {},
+  onCodingPlanQuotaResetAutoUseEnabledChange = async () => {},
   onOpenOnboardingDialog,
 }: {
   localePreference: LocalePreference;
@@ -159,6 +161,7 @@ export function GeneralSectionContent({
   zcodeInteractionBehavior: ZCodeInteractionBehavior;
   askUserQuestionAutoResolutionEnabled?: boolean;
   modelIoFullRetentionEnabled?: boolean;
+  codingPlanQuotaResetAutoUseEnabled?: boolean;
   onDataBaseDirChange: (dir: string) => Promise<void>;
   onSelectDataBaseDir: () => Promise<string | null>;
   onTerminalInheritSystemProfileChange: (enabled: boolean) => Promise<void>;
@@ -183,6 +186,7 @@ export function GeneralSectionContent({
   onZCodeInteractionBehaviorChange: (behavior: ZCodeInteractionBehavior) => Promise<void>;
   onAskUserQuestionAutoResolutionEnabledChange?: (enabled: boolean) => Promise<void>;
   onModelIoFullRetentionEnabledChange?: (enabled: boolean) => Promise<void>;
+  onCodingPlanQuotaResetAutoUseEnabledChange?: (enabled: boolean) => Promise<void>;
   onOpenOnboardingDialog: () => void;
 }) {
   const { intl } = useZCodeIntl();
@@ -753,6 +757,24 @@ export function GeneralSectionContent({
               checked={modelIoFullRetentionEnabled}
               onCheckedChange={(checked) => {
                 void onModelIoFullRetentionEnabledChange(checked);
+              }}
+            />
+          }
+        />
+        {/* 重置卡临期自动核销（spec：specs/coding-plan-quota-reset-auto-use.md）；关闭后仅保留手动核销。 */}
+        <SettingsRow
+          label={intl.formatMessage({ id: "settings.codingPlanQuotaResetAutoUse" })}
+          description={intl.formatMessage({
+            id: "settings.codingPlanQuotaResetAutoUseDescription",
+          })}
+          control={
+            <Switch
+              aria-label={intl.formatMessage({
+                id: "settings.codingPlanQuotaResetAutoUse",
+              })}
+              checked={codingPlanQuotaResetAutoUseEnabled}
+              onCheckedChange={(checked) => {
+                void onCodingPlanQuotaResetAutoUseEnabledChange(checked);
               }}
             />
           }

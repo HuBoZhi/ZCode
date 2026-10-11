@@ -39,6 +39,13 @@ import { useZCodeStoreWithDefault } from "@/store/StoreProvider.js";
 
 const STATUS_FRESHNESS_MS = 1_500;
 const USE_STATUS_RETRY_DELAYS_MS = [0, 250, 750, 1_500] as const;
+// 临期自动核销（spec：specs/coding-plan-quota-reset-auto-use.md）：重置机会到期作废收益为 0，
+// 核销收益非负，剩余有效期不足该阈值时自动走手动核销路径，避免用户不在场时白扔。
+const CODING_PLAN_QUOTA_RESET_AUTO_USE_LEAD_MS = 30 * 60_000;
+// 同一张卡每窗口最多自动尝试次数；连续失败多为服务端/网络持续异常，继续重试只会 toast 风暴。
+const CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS = 3;
+// 两次自动尝试间的最小冷却，覆盖 claim busy（其他窗口在处理）与瞬态失败的即时重触发。
+const CODING_PLAN_QUOTA_RESET_AUTO_USE_RETRY_COOLDOWN_MS = 5_000;
 const EMPTY_ENTRIES: Record<string, CodingPlanQuotaResetUiEntries> = {};
 const EMPTY_PLAYED: Record<string, CodingPlanQuotaResetAutoPlayedSlot> = {};
 const EMPTY_AUTOMATIC_OBSERVATIONS: Record<
@@ -133,6 +140,27 @@ const manualResetAttemptByService = new WeakMap<
   IUsageStatsService,
   Map<string, SharedManualResetAttempt>
 >();
+
+interface CodingPlanQuotaResetAutoUseAttempt {
+  attempts: number;
+  lastTriedAt: number;
+  inFlight: boolean;
+}
+
+// 自动核销防重计数按 service + scope + 类型 + 卡到期时刻隔离：同一窗口内 Composer、
+// 设置页、Usage 页多入口挂载本 hook 时各自评估同一张卡，必须共享同一份 in-flight/次数轨迹。
+const autoUseAttemptsByService = new WeakMap<
+  IUsageStatsService,
+  Map<string, CodingPlanQuotaResetAutoUseAttempt>
+>();
+
+function buildAutoUseClaimKey(
+  sourceKey: string,
+  resetType: CodingPlanResetType,
+  expiresAt: number,
+): string {
+  return `coding-plan-reset-autouse:${encodeURIComponent(sourceKey)}:${resetType}:${expiresAt}`;
+}
 
 function buildScopeKey(scope: CodingPlanResetScopeRequest): string {
   return JSON.stringify([scope.preferredProviderId, scope.accountAccess]);
@@ -374,6 +402,26 @@ export function useCodingPlanQuotaResetUi({
   const { intl } = useZCodeIntl();
   const services = useOptionalBaseWorkspaceServices();
   const usageStatsService = services?.usageStatsService;
+  // 自动核销只信 base host 的 app 全局设置与跨窗口 claim；与 usageStatsService 同源获取。
+  const settingService = services?.settingService;
+  const broadcastService = services?.broadcastService;
+  // 自动核销开关默认开启（AppSettings schema default(true)）；设置读取失败时保持默认，
+  // 不因设置接口抖动让临期卡白白作废。触发前还会实时校验一次，关闭立即生效。
+  const [autoUseEnabled, setAutoUseEnabled] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    settingService
+      ?.get()
+      .then((settings) => {
+        if (!cancelled) {
+          setAutoUseEnabled(settings.codingPlanQuotaResetAutoUseEnabled !== false);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [settingService]);
   const stableAccountAccess = useStableAccountAccess(accountAccess);
   const scope = useMemo<CodingPlanResetScopeRequest | null>(() => {
     const normalizedProviderId = preferredProviderId?.trim();
@@ -829,6 +877,132 @@ export function useCodingPlanQuotaResetUi({
 
   const resetFiveHour = useCallback(() => reset("FIVE_HOUR"), [reset]);
   const resetWeek = useCallback(() => reset("WEEK"), [reset]);
+
+  // 临期自动核销：跨窗口以 (sourceKey, resetType, expiresAt) 粒度 claim，winner 窗口复用
+  // 手动 reset()（幂等键、processing 状态、status 对账、防双核销全部继承）；其余窗口跳过。
+  // 成功 commitClaim 后同卡在全应用生命周期内不再被任何窗口重试；失败 releaseClaim 允许
+  // 后续重试。broadcastService 缺失时（旧 host/测试 double）不执行：宁作废不双核销。
+  const runAutoUse = useCallback(
+    async (resetType: CodingPlanResetType, expiresAt: number) => {
+      if (!enabled || !sourceKey || !usageStatsService || !scope || !broadcastService) {
+        return;
+      }
+      const attemptKey = `${buildScopeKey(scope)}::${resetType}::${expiresAt}`;
+      const attempts = getServiceMap(autoUseAttemptsByService, usageStatsService);
+      const existing = attempts.get(attemptKey);
+      if (existing?.inFlight) {
+        return;
+      }
+      if (existing && existing.attempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
+        return;
+      }
+      const nowMs = Date.now();
+      if (existing && nowMs - existing.lastTriedAt < CODING_PLAN_QUOTA_RESET_AUTO_USE_RETRY_COOLDOWN_MS) {
+        return;
+      }
+      attempts.set(attemptKey, {
+        attempts: existing?.attempts ?? 0,
+        lastTriedAt: nowMs,
+        inFlight: true,
+      });
+
+      try {
+        // 触发前实时校验开关：挂载时读到的缓存可能已过期，关闭应立即生效。
+        if (settingService) {
+          try {
+            const settings = await settingService.get();
+            if (settings.codingPlanQuotaResetAutoUseEnabled === false) {
+              return;
+            }
+          } catch {
+            // 设置读取失败按默认开启继续，理由同 autoUseEnabled 初值。
+          }
+        }
+        let claim;
+        try {
+          claim = await broadcastService.acquireClaim(
+            buildAutoUseClaimKey(sourceKey, resetType, expiresAt),
+          );
+        } catch {
+          // claim RPC 异常按稍后重试处理，冷却已由 lastTriedAt 保证。
+          return;
+        }
+        if (claim.status !== "acquired") {
+          // busy：其他窗口在处理这张卡；committed：已被核销；unavailable：Main 暂不可用，
+          // 三者都不该由本窗口继续，留待下一次评估。
+          return;
+        }
+        const nextAttempts = (existing?.attempts ?? 0) + 1;
+        attempts.set(attemptKey, {
+          attempts: nextAttempts,
+          lastTriedAt: nowMs,
+          inFlight: true,
+        });
+        try {
+          await reset(resetType);
+          try {
+            await broadcastService.commitClaim(claim.lease);
+          } catch {
+            // 核销本身已成功；commit 失败只会让其他窗口多试一次 /use，服务端幂等与
+            // status 对账会兜住，不影响结果。
+          }
+          toast(intl.formatMessage({ id: "codingPlan.quotaReset.autoUsed" }), {
+            variant: "info",
+          });
+        } catch (error) {
+          try {
+            await broadcastService.releaseClaim(claim.lease);
+          } catch {
+            // 迟到 token 的 release 由 Main 忽略，这里无需处理。
+          }
+          // 失败 toast 已由 reset() 内部发出；这里只负责停止条件与日志。
+          if (nextAttempts >= CODING_PLAN_QUOTA_RESET_AUTO_USE_MAX_ATTEMPTS) {
+            logger.warn("[coding-plan-reset] auto use attempts exhausted", {
+              sourceKey,
+              resetType,
+              expiresAt,
+              error: toErrorMessage(error),
+            });
+          }
+        }
+      } finally {
+        const current = attempts.get(attemptKey);
+        if (current) {
+          attempts.set(attemptKey, { ...current, inFlight: false });
+        }
+      }
+    },
+    [
+      broadcastService,
+      enabled,
+      intl,
+      reset,
+      scope,
+      settingService,
+      sourceKey,
+      usageStatsService,
+    ],
+  );
+
+  // 临期自动核销评估：复用倒计时 1s ticker 的 now（ticker 仅在仍有可用机会时运行，与这里
+  // 的候选条件同源）；不在 30 分钟窗口内时不产生任何请求，runAutoUse 内部另有幂等防重。
+  useEffect(() => {
+    if (!enabled || !autoUseEnabled) {
+      return;
+    }
+    const nowMs = Date.now();
+    for (const resetType of CODING_PLAN_QUOTA_RESET_TYPES) {
+      const entry = resetType === "WEEK" ? weekEntry : fiveHourEntry;
+      // hasUsable 不带类型谓词，这里显式判空完成收窄。
+      if (!entry || !hasUsableCodingPlanQuotaResetOpportunity(entry, nowMs)) {
+        continue;
+      }
+      const expiresAt = entry.opportunityExpiresAt;
+      if (expiresAt !== null && expiresAt - nowMs <= CODING_PLAN_QUOTA_RESET_AUTO_USE_LEAD_MS) {
+        void runAutoUse(resetType, expiresAt);
+      }
+    }
+  }, [autoUseEnabled, enabled, fiveHourEntry, weekEntry, now, runAutoUse]);
   const reserveAutomaticCompletion = useCallback(
     async (
       resetType: CodingPlanResetType,

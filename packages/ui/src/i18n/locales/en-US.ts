@@ -2614,6 +2614,9 @@ const enUS: Record<string, string> = {
   "settings.modelIoFullRetention": "Keep complete model I/O",
   "settings.modelIoFullRetentionDescription":
     "Keep complete model requests and responses without compression, size limits, or automatic deletion.",
+  "settings.codingPlanQuotaResetAutoUse": "Use expiring quota resets automatically",
+  "settings.codingPlanQuotaResetAutoUseDescription":
+    "Automatically use a quota reset when it expires within 30 minutes, so it never goes to waste. Only works while this app is running.",
   "settings.performanceMode": "Performance mode",
   "settings.performanceModeDescription": "Simplify rendered output to improve performance.",
   "settings.taskAutoArchive": "Auto-archive old tasks",
@@ -3858,6 +3861,8 @@ const enUS: Record<string, string> = {
   "codingPlan.quotaReset.resetAriaWeek": "Reset weekly quota",
   "codingPlan.quotaReset.success": "Reset successful",
   "codingPlan.quotaReset.failed": "Reset failed. Please try again.",
+  "codingPlan.quotaReset.autoUsed":
+    "Expiring quota reset used automatically. Quota restored.",
   "codingPlan.quotaReset.processing": "Resetting 5-hour quota…",
   "codingPlan.quotaReset.processingWeek": "Resetting weekly quota…",
   "codingPlan.quotaReset.done": "5-hour quota reset",

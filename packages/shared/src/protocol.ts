@@ -333,6 +333,12 @@ export interface AppSettings {
   /** 是否完整保留 Model I/O；开启后不轮转、不限额重置、不压缩或裁剪，鉴权信息仍会脱敏。 */
   modelIoFullRetentionEnabled?: boolean;
   /**
+   * 重置卡临期自动核销（spec：specs/coding-plan-quota-reset-auto-use.md）。
+   * 五小时/周额度重置机会剩余有效期不足 30 分钟时自动调用 /use，避免过期作废；
+   * 缺失按开启兼容旧配置。仅在 App 运行且 broadcast claim 可用时生效。
+   */
+  codingPlanQuotaResetAutoUseEnabled?: boolean;
+  /**
    * 用户选的动态工作流模式（docs/dynamic-workflow/launch.md「The user's choice」）。缺席 = 跟随服务端
    * 提供的模式；只在功能已提供时生效。选回提供的模式时删除该字段，未改动的安装继续跟随服务端翻转。
    */
