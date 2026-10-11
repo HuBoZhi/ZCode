@@ -14,3 +14,7 @@ third-party/runtime/*.txt -text -whitespace
 docs/knip/docs/LICENSE -text -whitespace
 docs/knip/docs/licenses/** -text -whitespace
 third-party/inventory.json linguist-generated=true
+
+# Gen UI vendor 固定快照：manifest 按 blob 字节记录 sha256，checkout 换行转换会让
+# 桌面端构建的离线校验（gen-ui-runtime-assets.mjs）直接失败。按二进制字节保存。
+apps/zcode-cli/packages/visualize-plugin/skills/visualize/assets/vendor/** -text
