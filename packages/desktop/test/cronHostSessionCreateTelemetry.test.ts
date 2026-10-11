@@ -48,7 +48,6 @@ function setup() {
     resolveWorkspaceKey: () => "workspace",
     formatModelPickerValue: () => "test/test",
     parseCronRunScheduledAt: () => 1,
-    applyCronRunConfigToExistingTask: async () => {},
     cronRunSubscriptionKey: () => "key",
     trackCronRunOutcome: vi.fn(),
     disposeCronRunSubscription: vi.fn(),
@@ -90,14 +89,15 @@ describe("定时任务的 Session 创建口径", () => {
       },
     );
   });
-  it("prompt 创建的任务绑定原会话，多次追加都不报告", async () => {
+  it("会话内创建的任务每次派发也新建对话执行并报告，不再回写原会话", async () => {
     const state = setup();
+    // targetTaskId 在派发链路已移除；这里作为残留属性传入，验证执行不因历史绑定字段回退到原会话。
     await state.dispatch({ ...state.request, targetTaskId: "existing" });
     await state.dispatch({ ...state.request, runId: "a1:2000", targetTaskId: "existing" });
-    expect(state.service.createTask).not.toHaveBeenCalled();
-    expect(state.service.resumeTask).toHaveBeenCalledTimes(2);
+    expect(state.service.createTask).toHaveBeenCalledTimes(2);
+    expect(state.service.resumeTask).not.toHaveBeenCalled();
     expect(state.service.sendPrompt).toHaveBeenCalledTimes(2);
-    expect(state.report).not.toHaveBeenCalled();
+    expect(state.report).toHaveBeenCalledTimes(2);
   });
   it("新建后首发拒绝不报告", async () => {
     const state = setup();

@@ -266,7 +266,8 @@ manual runId
   -> dispose terminal subscription / claim heartbeat
 ```
 
-未绑定任务的 `createTask.traceId` 只表示建会话，不参与本次执行认领。派发异常必须按同一个
+`createTask.traceId` 只表示建会话，不参与本次执行认领（fork 行为：每次 run 都新建对话，见
+`specs/automation-dispatch-new-conversation.md`）。派发异常必须按同一个
 `taskId + runId` subscription key 清理监听与 heartbeat；终态只接受 `inputId === runId` 的事件，避免
 旧执行轮误收口当前 manual claim。
 
@@ -298,26 +299,23 @@ manual runId
   生命周期；manual single-flight claim 仍由真实 turn 终态收口。
 - Card 在桌面端与 Web 端统一使用 `automations.runCount` 文案；中英文均只插入累计 `count`。
 
-## 派发配置回写
+## 派发配置应用
 
-定时任务触发时，任务当前保存的模型、Think 和模式必须先回写绑定会话，再发送 prompt。
-模型先通过 V4 `switchModelConfig` 原子更新 runtime 和 conversation projection，再在目标模型上
-显式收敛 Think，最后通过 `switchCollaborationMode` 收敛权限模式。禁止先走 legacy
-`session/setModel`，否则 runtime 已切换时补写可能返回 noop，导致会话工具栏仍显示旧模型。
+fork 行为变更（见 `specs/automation-dispatch-new-conversation.md`）：定时任务每次触发都在任务
+workspace 新建对话执行，任务当前保存的模型、Think 和模式在 `createTask` 时一次性应用，
+不再存在「回写绑定会话配置」的派发路径。
 
 ```text
 automation dispatch
-  -> V4 switchModelConfig(model + think + runtimeModel)
-  -> V4 state.updated.config
-  -> V4 switchModelConfig(target think)
-  -> V4 switchCollaborationMode(permission mode)
+  -> createTask(model + thoughtLevel + mode + automationId)  # 每次 run 新建对话
   -> send prompt
 ```
 
 - 只保证本次触发使用任务当前保存配置，不迁移或修复历史任务数据。
+- 普通会话手动切模型的入口和既有 `setModel` 兼容路径不变；`setAutomationSessionConfig`
+  服务 API 保留，但定时任务派发不再消费。
 - 桌面 `desktop-continuous` 继续消费 conversation projection；手机端仍保持
   `web-remote-replayable` 的 command/snapshot 恢复边界。
-- 普通会话手动切模型的入口和既有 `setModel` 兼容路径不变。
 
 编辑定时任务切换模型时，Think 必须按目标模型的能力重新收敛，不能沿用源模型的保存值。
 目标模型元数据加载完成前暂不允许保存；加载失败必须进入不可提交的失败态并提供重试，不能把

@@ -585,7 +585,8 @@ async function dispatchOffPeakRun(request: OffPeakRunDispatchRequest): Promise<{
     let traceId: TraceId;
     let promptContent = request.prompt;
     if (dispatchKind === "bound-first-run") {
-      // 绑定首跑：会话内创建的任务在创建它的会话里执行（对齐 dispatchCronRun 的 targetTaskId 路径）。
+      // 绑定首跑：会话内创建的闲时任务在创建它的会话里执行（cron 派发已改为每次新建对话，
+      // 该语义仅保留在 off-peak 绑定首跑）。
       // 先探测再写配置：绑定的是用户的工作会话，忙碌时直接 transient 交给调度器退避，
       // 不能先 setMode 再被 session/send 以 -32010 拒绝（那会悄悄改掉用户会话的权限模式）。
       taskId = request.sessionId!;
@@ -705,7 +706,6 @@ interface CronRunDispatchRequest {
   automationId: string;
   runId: string;
   prompt: string;
-  targetTaskId?: string;
   modelSelection?: ModelSelection;
   mode?: ZCodeTaskMode;
   workspacePath: string;
@@ -773,44 +773,6 @@ function disposeCronRunSubscription(key: string): void {
   disposable.dispose();
 }
 
-async function applyCronRunConfigToExistingTask(params: {
-  zcodeTaskService: IZCodeTaskService;
-  taskId: string;
-  traceId: TraceId;
-  modelSelection?: ModelSelection;
-  mode?: string;
-}): Promise<void> {
-  let thoughtAppliedWithModel = false;
-  let modeAppliedWithModel = false;
-  if (params.modelSelection) {
-    await params.zcodeTaskService.setAutomationSessionConfig({
-      taskId: params.taskId,
-      traceId: params.traceId,
-      modelSelection: params.modelSelection,
-      thoughtLevel: params.modelSelection.options?.reasoningLevel,
-      mode: params.mode?.trim() as ZCodeTaskMode | undefined,
-    });
-    thoughtAppliedWithModel = true;
-    modeAppliedWithModel = true;
-  }
-  if (!modeAppliedWithModel && params.mode?.trim()) {
-    await params.zcodeTaskService.setConfigOption({
-      taskId: params.taskId,
-      traceId: params.traceId,
-      configId: "mode",
-      value: params.mode.trim(),
-    });
-  }
-  if (!thoughtAppliedWithModel && params.modelSelection?.options?.reasoningLevel) {
-    await params.zcodeTaskService.setConfigOption({
-      taskId: params.taskId,
-      traceId: params.traceId,
-      configId: "thought_level",
-      value: params.modelSelection.options.reasoningLevel,
-    });
-  }
-}
-
 function trackCronRunOutcome(params: {
   zcodeTaskService: IZCodeTaskService;
   taskId: string;
@@ -864,7 +826,9 @@ function trackCronRunOutcome(params: {
 
 /**
  * 把一次 cron/manual run 直接提交给当前 host 的 V4 task service。
- * 会话内 automation 可能绑定到未激活 session，必须先恢复再应用保存的运行参数。
+ * fork 行为：每次派发都在 automation 所属 workspace 新建对话执行（createTask 携带
+ * automationId 落 cron 分组）；targetTaskId 不再作为执行载体，仅保留创建侧归属展示
+ * 与防递归绑定检查（见 specs/automation-dispatch-new-conversation.md）。
  */
 async function dispatchCronRun(request: CronRunDispatchRequest): Promise<{
   taskId: string;
@@ -903,39 +867,19 @@ async function dispatchCronRun(request: CronRunDispatchRequest): Promise<{
   const trigger = request.runId.includes(":manual:") ? "manual" : "schedule";
   const scheduledAt = parseCronRunScheduledAt(request.runId, request.automationId);
   try {
-    const task = request.targetTaskId
-      ? { taskId: request.targetTaskId }
-      : await zcodeTaskService.createTask({
-          workspacePath: request.workspacePath,
-          workspaceIdentity: request.workspaceIdentity,
-          model: formatModelPickerValue(submissionModelSelection),
-          mode: request.mode,
-          thoughtLevel: submissionModelSelection.options?.reasoningLevel,
-          automationId: request.automationId,
-        });
-    // 未绑定会话时不能沿用 createTask 的 session trace 作为首条 prompt trace：
+    // 每次 run 都新建对话执行；任务保存的模型/档位/权限模式在建会话时一次应用。
+    const task = await zcodeTaskService.createTask({
+      workspacePath: request.workspacePath,
+      workspaceIdentity: request.workspaceIdentity,
+      model: formatModelPickerValue(submissionModelSelection),
+      mode: request.mode,
+      thoughtLevel: submissionModelSelection.options?.reasoningLevel,
+      automationId: request.automationId,
+    });
+    // 不能沿用 createTask 的 session trace 作为首条 prompt trace：
     // CLI 无法从 inputId 还原 manual/schedule admission。
-    // 建会话 trace 与执行 runId 是两种身份；两条派发路径的 prompt 都必须统一使用 runId。
+    // 建会话 trace 与执行 runId 是两种身份；prompt 必须统一使用 runId。
     const promptTraceId = request.runId as TraceId;
-    if (request.targetTaskId) {
-      // 绑定会话在 app 重启或切换 workspace 后通常不处于 active；旧实现直接
-      // setConfig/sendPrompt 会立即报 Session is not active，看起来像「立即运行」没有触发。
-      await zcodeTaskService.resumeTask({
-        taskId: task.taskId,
-        workspacePath: request.workspacePath,
-        workspaceIdentity: request.workspaceIdentity,
-        model: formatModelPickerValue(submissionModelSelection),
-        thoughtLevel: submissionModelSelection.options?.reasoningLevel,
-        automationId: request.automationId,
-      });
-      await applyCronRunConfigToExistingTask({
-        zcodeTaskService,
-        taskId: task.taskId,
-        traceId: promptTraceId,
-        modelSelection: submissionModelSelection,
-        mode: request.mode,
-      });
-    }
     const botsService = targetServices.getOptional(IBotsService);
     if (botsService) {
       try {
@@ -977,15 +921,13 @@ async function dispatchCronRun(request: CronRunDispatchRequest): Promise<{
       clientMode: "desktop-continuous",
       automationId: request.automationId,
     });
-    // prompt 创建的定时任务带 targetTaskId，追加原会话不能计成 session_create。
-    if (!request.targetTaskId) {
-      reportHostSessionCreate(parentPort, {
-        sessionId: task.taskId,
-        messageId: promptTraceId,
-        source: "automation_scheduled",
-        workspaceIdentity: request.workspaceIdentity,
-      });
-    }
+    // 每次 run 都新建对话，统一计成 session_create。
+    reportHostSessionCreate(parentPort, {
+      sessionId: task.taskId,
+      messageId: promptTraceId,
+      source: "automation_scheduled",
+      workspaceIdentity: request.workspaceIdentity,
+    });
     return { taskId: task.taskId, sessionId: task.taskId };
   } catch (error) {
     if (trackedKey) disposeCronRunSubscription(trackedKey);
@@ -1015,7 +957,6 @@ async function dispatchManualAutomationRun(params: {
       automationId: params.automation.automationId,
       runId: params.run.runId,
       prompt: params.automation.prompt,
-      targetTaskId: params.automation.targetTaskId,
       modelSelection: params.run.modelSelection ?? params.automation.modelSelection,
       mode: params.automation.mode,
       workspacePath: params.automation.workspacePath,

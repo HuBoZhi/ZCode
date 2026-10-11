@@ -4,7 +4,7 @@ import { OffPeakPermanentDispatchError } from "@zcode/services/node";
  * 闲时派发三分支：
  * - resume：conversation_id 已回填 = 已跑过，续跑同一 session 并发续跑提示词；
  * - bound-first-run：会话内创建绑定了 session_id 但尚未跑过，resume 绑定会话并发任务原 prompt
- *   （对齐 dispatchCronRun 的 targetTaskId 路径）；
+ *   （cron 派发已改为每次新建对话，绑定续跑语义仅保留在 off-peak）；
  * - init：表单创建，新建专属 session。
  */
 export type OffPeakDispatchKind = "resume" | "bound-first-run" | "init";

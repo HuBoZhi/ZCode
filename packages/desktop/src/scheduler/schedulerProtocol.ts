@@ -10,7 +10,6 @@ export type SchedulerToMainMessage =
       automationId: string;
       runId: string;
       prompt: string;
-      targetTaskId?: string;
       modelSelection?: ModelSelection;
       mode?: string;
       workspacePath: string;
