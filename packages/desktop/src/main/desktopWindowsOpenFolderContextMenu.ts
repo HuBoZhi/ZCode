@@ -2,12 +2,14 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import type { Locale } from "@zcode/shared";
 
-const MENU_KEY_NAME = "ZCode.OpenInZCode";
+// fork 改用独立的注册表键名：官方 ZCode 也写 ZCode.OpenInZCode，同键会互相覆盖右键菜单指向，
+// ZetaCode.OpenInZetaCode 保证两个安装各自的菜单项独立存在。
+const MENU_KEY_NAME = "ZetaCode.OpenInZetaCode";
 const DIRECTORY_MENU_KEY = `HKCU\\Software\\Classes\\Directory\\shell\\${MENU_KEY_NAME}`;
 const DRIVE_MENU_KEY = `HKCU\\Software\\Classes\\Drive\\shell\\${MENU_KEY_NAME}`;
 const MENU_LABELS: Record<Locale, string> = {
-  "zh-CN": "在ZCode中打开",
-  "en-US": "Open in ZCode",
+  "zh-CN": "在ZetaCode中打开",
+  "en-US": "Open in ZetaCode",
 };
 
 type Logger = {

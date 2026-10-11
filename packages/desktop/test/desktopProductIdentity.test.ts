@@ -25,10 +25,10 @@ describe("desktop product identity", () => {
   it("ZCODE_ENV=test 使用可与生产版并排安装的 Preview 身份", () => {
     expect(resolveDesktopProductIdentity({ ZCODE_ENV: "test" })).toEqual({
       flavor: "preview",
-      appId: "dev.zcode.app.preview",
-      productName: "ZCode Preview",
-      linuxExecutableName: "zcode-preview",
-      linuxPackageName: "zcode-preview",
+      appId: "dev.zetacode.app.preview",
+      productName: "ZetaCode Preview",
+      linuxExecutableName: "zetacode-preview",
+      linuxPackageName: "zetacode-preview",
       cuaHelperInstallVariant: "preview",
     });
   });
@@ -80,10 +80,10 @@ describe("desktop product identity", () => {
     );
     expect(desktopProductIdentities.production).toEqual({
       flavor: "production",
-      appId: "dev.zcode.app",
-      productName: "ZCode",
-      linuxExecutableName: "zcode",
-      linuxPackageName: "zcode",
+      appId: "dev.zetacode.app",
+      productName: "ZetaCode",
+      linuxExecutableName: "zetacode",
+      linuxPackageName: "zetacode",
       cuaHelperInstallVariant: null,
     });
   });
@@ -113,6 +113,7 @@ describe("desktop product identity", () => {
   });
 
   it("开发态继续使用独立 AUMID，避免污染打包版 Shell 身份", () => {
-    expect(resolveWindowsAppUserModelId({}, { isPackaged: false })).toBe("cn.aminer.zcode");
+    // fork 的开发态 AUMID 同样改名，与官方 ZCode 的开发调试身份区分开。
+    expect(resolveWindowsAppUserModelId({}, { isPackaged: false })).toBe("dev.zetacode.app.dev");
   });
 });

@@ -2,8 +2,9 @@ import { access, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promis
 import { dirname, posix } from "node:path";
 
 export const DEV_ELECTRON_PROTOCOL_SCHEME = "zcode";
-export const DEV_ELECTRON_APP_NAME = "ZCode Dev";
-export const DEV_ELECTRON_APP_BUNDLE_ID = "dev.zcode.app.development";
+// fork 开发态身份同步改名，避免与官方 ZCode 的 Dev bundle / 开发调试身份混淆。
+export const DEV_ELECTRON_APP_NAME = "ZetaCode Dev";
+export const DEV_ELECTRON_APP_BUNDLE_ID = "dev.zetacode.app.development";
 // 副本布局版本，见 prepareDevElectronAppBundle 中的指纹说明。
 export const DEV_ELECTRON_BUNDLE_FORMAT = 2;
 

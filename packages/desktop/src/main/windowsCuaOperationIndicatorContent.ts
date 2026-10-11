@@ -12,9 +12,10 @@ export const INDICATOR_CARD_TOP_OFFSET = 12;
 export const INDICATOR_SHADOW_INSET = { top: 6, right: 8, bottom: 12, left: 8 } as const;
 
 export function indicatorCopy(locale: Locale): { text: string; width: number } {
+  // fork 改名后文案比原来多 3 个字符（ZetaCode），窗口宽度同步加宽，避免 nowrap 文本被裁切。
   return locale === "zh-CN"
-    ? { text: "ZCode 正在操作电脑", width: 234 }
-    : { text: "ZCode is controlling your computer", width: 308 };
+    ? { text: "ZetaCode 正在操作电脑", width: 258 }
+    : { text: "ZetaCode is controlling your computer", width: 332 };
 }
 
 export function indicatorWindowSize(locale: Locale): { width: number; height: number } {

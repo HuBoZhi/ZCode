@@ -4,12 +4,14 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import type { Locale } from "@zcode/shared";
 
-const WORKFLOW_NAME = "Open in ZCode.workflow";
-const WORKFLOW_BUNDLE_ID = "dev.zcode.app.finder-open-workflow";
+// fork 改用独立的 Finder Services 工作流名与 bundle id：官方 ZCode 同样安装
+// Open in ZCode.workflow 到 ~/Library/Services，同名会互相覆盖，改名后两者共存。
+const WORKFLOW_NAME = "Open in ZetaCode.workflow";
+const WORKFLOW_BUNDLE_ID = "dev.zetacode.app.finder-open-workflow";
 const WORKFLOW_VERSION = "5";
 const SERVICES_MENU_LABELS: Record<Locale, string> = {
-  "zh-CN": "在ZCode中打开",
-  "en-US": "Open in ZCode",
+  "zh-CN": "在ZetaCode中打开",
+  "en-US": "Open in ZetaCode",
 };
 
 const workflowScript = `first=""

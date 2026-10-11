@@ -5,21 +5,26 @@
  */
 export const ZCODE_PREVIEW_IDENTITY_ENV = "ZCODE_PREVIEW_IDENTITY";
 
+/**
+ * 本仓库是 ZCode 的个人 fork，安装身份统一改为 ZetaCode，避免与官方 ZCode 安装包冲突：
+ * productName 决定安装目录/快捷方式/开始菜单，appId 决定 Windows AUMID 与 macOS 包标识，
+ * 两者都与官方不同后，两个应用可并排安装、数据目录互不干扰。
+ */
 const PRODUCTION_IDENTITY = Object.freeze({
   flavor: "production",
-  appId: "dev.zcode.app",
-  productName: "ZCode",
-  linuxExecutableName: "zcode",
-  linuxPackageName: "zcode",
+  appId: "dev.zetacode.app",
+  productName: "ZetaCode",
+  linuxExecutableName: "zetacode",
+  linuxPackageName: "zetacode",
   cuaHelperInstallVariant: null,
 });
 
 const PREVIEW_IDENTITY = Object.freeze({
   flavor: "preview",
-  appId: "dev.zcode.app.preview",
-  productName: "ZCode Preview",
-  linuxExecutableName: "zcode-preview",
-  linuxPackageName: "zcode-preview",
+  appId: "dev.zetacode.app.preview",
+  productName: "ZetaCode Preview",
+  linuxExecutableName: "zetacode-preview",
+  linuxPackageName: "zetacode-preview",
   cuaHelperInstallVariant: "preview",
 });
 
@@ -84,7 +89,8 @@ export function resolveDesktopArtifactSuffix(env = process.env) {
  */
 export function resolveWindowsAppUserModelIdForFlavor(flavor, runtime = { isPackaged: true }) {
   if (runtime.isPackaged === false) {
-    return "cn.aminer.zcode";
+    // fork 的开发态身份也改名，避免本地调试快捷方式与官方 ZCode 安装包互相污染。
+    return "dev.zetacode.app.dev";
   }
   return desktopProductIdentities[flavor === "preview" ? "preview" : "production"].appId;
 }

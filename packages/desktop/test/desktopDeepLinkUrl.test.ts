@@ -173,7 +173,7 @@ describe("desktop deep link url helpers", () => {
     expect(operations).toContainEqual({
       args: [
         "add",
-        "HKCU\\Software\\Classes\\Directory\\shell\\ZCode.OpenInZCode\\command",
+        "HKCU\\Software\\Classes\\Directory\\shell\\ZetaCode.OpenInZetaCode\\command",
         "/ve",
         "/d",
         '"C:\\Program Files\\ZCode\\ZCode.exe" --open-workspace "%1"',
@@ -183,7 +183,7 @@ describe("desktop deep link url helpers", () => {
     expect(operations).toContainEqual({
       args: [
         "add",
-        "HKCU\\Software\\Classes\\Drive\\shell\\ZCode.OpenInZCode\\command",
+        "HKCU\\Software\\Classes\\Drive\\shell\\ZetaCode.OpenInZetaCode\\command",
         "/ve",
         "/d",
         '"C:\\Program Files\\ZCode\\ZCode.exe" --open-workspace "%1"',
@@ -196,8 +196,8 @@ describe("desktop deep link url helpers", () => {
     const { buildWindowsOpenFolderRegistryOperations, getWindowsOpenFolderMenuName } =
       await import("../src/main/desktopWindowsOpenFolderContextMenu.js");
 
-    expect(getWindowsOpenFolderMenuName("zh-CN")).toBe("在ZCode中打开");
-    expect(getWindowsOpenFolderMenuName("en-US")).toBe("Open in ZCode");
+    expect(getWindowsOpenFolderMenuName("zh-CN")).toBe("在ZetaCode中打开");
+    expect(getWindowsOpenFolderMenuName("en-US")).toBe("Open in ZetaCode");
 
     const operations = buildWindowsOpenFolderRegistryOperations({
       executablePath: "C:\\Program Files\\ZCode\\ZCode.exe",
@@ -207,23 +207,23 @@ describe("desktop deep link url helpers", () => {
     expect(operations).toContainEqual({
       args: [
         "add",
-        "HKCU\\Software\\Classes\\Directory\\shell\\ZCode.OpenInZCode",
+        "HKCU\\Software\\Classes\\Directory\\shell\\ZetaCode.OpenInZetaCode",
         "/ve",
         "/d",
-        "在ZCode中打开",
+        "在ZetaCode中打开",
         "/f",
       ],
     });
     expect(operations).toContainEqual({
       args: [
         "add",
-        "HKCU\\Software\\Classes\\Directory\\shell\\ZCode.OpenInZCode",
+        "HKCU\\Software\\Classes\\Directory\\shell\\ZetaCode.OpenInZetaCode",
         "/v",
         "MUIVerb",
         "/t",
         "REG_SZ",
         "/d",
-        "在ZCode中打开",
+        "在ZetaCode中打开",
         "/f",
       ],
     });
