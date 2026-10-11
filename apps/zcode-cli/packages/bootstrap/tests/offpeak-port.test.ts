@@ -110,12 +110,14 @@ describe("createProtocolOffPeakPort", () => {
       port.create({ title: "定时派生", prompt: "nightly digest" }, { sessionId: "session-1" }),
     ).resolves.toEqual({ ok: true, task: protocolTask });
     // 与 automation-port 相反：不查 cron 绑定（cron 轮派生闲时任务是 D49-3 组合玩法），
-    // 放大防护的唯一权威是服务端取号额度。
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationCheckTaskBinding,
-      expect.anything(),
-      expect.anything(),
-    );
+    // 放大防护的唯一权威是服务端取号额度。bound-session 查询协议已随创建互斥守卫整体移除；
+    // create 只允许自身的 offPeakList 前置查询 + offPeakCreate（requestClientWith 对未知
+    // 方法直接抛错，因此无需再枚举已删除的 checkTaskBinding）。
+    const calledMethods = requestClient.mock.calls.map((call) => call[0]);
+    expect(calledMethods).toEqual([
+      zcodeProtocolMethods.offPeakList,
+      zcodeProtocolMethods.offPeakCreate,
+    ]);
   });
 
   it("create 透传显式入参 + 绑定当前会话（D50），不注入会话运行态，也不冻结会话标题（D49-4/5）", async () => {

@@ -704,37 +704,6 @@ process.stdin.on("data", (chunk) => {
 });
 `;
 
-const AUTOMATION_BINDING_CHECK_FAKE_AGENT = `
-const fs = require("node:fs");
-const logPath = process.argv[2];
-let buf = "";
-let requested = false;
-function send(obj) { process.stdout.write(JSON.stringify(obj) + "\\n"); }
-setTimeout(() => {
-  if (requested) return;
-  requested = true;
-  send({
-    id: "binding-check-1",
-    method: "automation/checkTaskBinding",
-    params: { targetTaskId: "session-1" },
-  });
-}, 25);
-process.stdin.on("data", (chunk) => {
-  buf += chunk.toString("utf8");
-  let idx;
-  while ((idx = buf.indexOf("\\n")) >= 0) {
-    const line = buf.slice(0, idx);
-    buf = buf.slice(idx + 1);
-    if (!line.trim()) continue;
-    let msg;
-    try { msg = JSON.parse(line); } catch { continue; }
-    if (msg.id === "binding-check-1" && (msg.result || msg.error)) {
-      fs.writeFileSync(logPath, JSON.stringify(msg));
-    }
-  }
-});
-`;
-
 const STALE_THEN_PLUGIN_LIST_FAKE_AGENT = `
 const fs = require("node:fs");
 const markerPath = process.argv[2];
@@ -1491,45 +1460,6 @@ describe("createZCodeAgentService", () => {
       }),
     ).resolves.toEqual({ status: "queued" });
     expect(dispatch).toHaveBeenCalledTimes(1);
-  });
-
-  it("automation/checkTaskBinding 不依赖完整列表字段，历史空 mode 仍可完成归属判断", async () => {
-    const sandboxRoot = mkdtempSync(join(tmpdir(), "zcode-agent-binding-check-"));
-    createdDirs.push(sandboxRoot);
-    setDataBaseDir(sandboxRoot);
-    const workspacePath = sandboxRoot;
-    const scriptPath = join(sandboxRoot, "binding-check-agent.cjs");
-    const logPath = join(sandboxRoot, "binding-check-response.json");
-    writeFileSync(scriptPath, AUTOMATION_BINDING_CHECK_FAKE_AGENT);
-    const service = createReadyZCodeAgentService({
-      commandResolver: () => ({ command: process.execPath, args: [scriptPath, logPath] }),
-    });
-    const automation = await service.createAutomation({
-      workspacePath,
-      title: "legacy task",
-      cronExpr: "0 9 * * *",
-      prompt: "summarize",
-      mode: "build",
-      recurring: true,
-    });
-    const db = new DatabaseSync(getTasksIndexDatabasePath());
-    db.prepare(
-      "UPDATE automations SET mode = '', target_task_id = 'session-1' WHERE automation_id = ?",
-    ).run(automation.automationId);
-    db.close();
-
-    try {
-      await expect(service.initialize({ workspacePath })).resolves.toMatchObject({
-        available: true,
-      });
-      await vi.waitFor(() => expect(existsSync(logPath)).toBe(true), { timeout: 5000 });
-      expect(JSON.parse(readFileSync(logPath, "utf8"))).toEqual({
-        id: "binding-check-1",
-        result: { bound: true },
-      });
-    } finally {
-      await service.disposeAllAndWait();
-    }
   });
 
   it("reports unavailable without starting a process when no command is configured", async () => {

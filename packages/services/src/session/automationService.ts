@@ -237,14 +237,6 @@ export class AutomationService {
     return this.repo.list(scope);
   }
 
-  async hasTaskBinding(scope: {
-    workspacePath: string;
-    workspaceIdentity?: string;
-    targetTaskId: string;
-  }): Promise<boolean> {
-    return this.repo.hasTaskBinding(scope);
-  }
-
   async get(
     automationId: string,
     scope?: AutomationWorkspaceScope,

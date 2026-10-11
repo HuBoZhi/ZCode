@@ -3981,19 +3981,6 @@ export const zcodeAutomationListResultSchema = z
   .strict();
 export type ZCodeAutomationListProtocolResult = z.infer<typeof zcodeAutomationListResultSchema>;
 
-export const zcodeAutomationCheckTaskBindingParamsSchema = z
-  .object({ targetTaskId: nonEmptyString })
-  .strict();
-export type ZCodeAutomationCheckTaskBindingProtocolParams = z.infer<
-  typeof zcodeAutomationCheckTaskBindingParamsSchema
->;
-export const zcodeAutomationCheckTaskBindingResultSchema = z
-  .object({ bound: z.boolean() })
-  .strict();
-export type ZCodeAutomationCheckTaskBindingProtocolResult = z.infer<
-  typeof zcodeAutomationCheckTaskBindingResultSchema
->;
-
 export const zcodeAutomationDeleteParamsSchema = z
   .object({ automationId: nonEmptyString })
   .strict();
@@ -4181,7 +4168,6 @@ export const zcodeProtocolMethods = {
   channelReply: "bot/channel/reply",
   topicResourceCancel: "topic/resource/cancel",
   automationUpdate: "automation/update",
-  automationCheckTaskBinding: "automation/checkTaskBinding",
   automationList: "automation/list",
   automationDelete: "automation/delete",
   // Off-Peak 会话内创建：与 automation 兄弟并列的独立方法族。

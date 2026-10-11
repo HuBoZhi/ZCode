@@ -104,7 +104,8 @@ export const cronCreateHandler: ToolHandler = async (input, context) => {
   const automation = await context.automationPort.create(parsed, {
     // 会话内创建定时任务时模型来自当前 runtime，而不是模型可控的工具入参。
     ...(context.model ? { model: `${context.model.providerId}/${context.model.modelId}` } : {}),
-    // 会话内创建的 cron 固定复用当前 session，后续触发不再新建 session。
+    // sessionId 仅作为创建侧归属标记（侧栏分组展示）；执行时每次派发都在任务 workspace
+    // 新建对话（见 specs/automation-dispatch-new-conversation.md），同一会话可创建多个任务。
     sessionId: context.sessionId,
   });
   return {

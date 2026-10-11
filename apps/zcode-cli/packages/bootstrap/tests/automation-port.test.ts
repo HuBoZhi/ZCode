@@ -2,15 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AutomationCreateLimitError, isAutomationCreateLimitError } from "@zcode/contracts";
 import { AUTOMATION_CREATE_LIMIT_ERROR_CODE, isHighspeedProviderId, zcodeProtocolMethods } from "@zcode/shared";
 import {
-  AUTOMATION_CREATE_BOUND_SESSION_CHECK_ERROR,
   AUTOMATION_CREATE_FROM_AUTOMATION_RUN_ERROR,
-  AUTOMATION_CREATE_IN_BOUND_SESSION_ERROR,
   createProtocolAutomationPort,
 } from "../src/zcode-protocol/automation-port.js";
-import {
-  ProtocolRequestError,
-  type ZCodeProtocolAgentServerContext,
-} from "../src/zcode-protocol/server-types.js";
+import type { ZCodeProtocolAgentServerContext } from "../src/zcode-protocol/server-types.js";
 
 describe("createProtocolAutomationPort", () => {
   it("拒绝 automation 执行 turn 里再次 CronCreate，且不调用 automation/create", async () => {
@@ -51,67 +46,10 @@ describe("createProtocolAutomationPort", () => {
     expect(requestClient).not.toHaveBeenCalled();
   });
 
-  it("拒绝在已归属定时任务的会话里再次 CronCreate（按 targetTaskId 兜底），且不调用 automation/create", async () => {
-    // Bugfix 回归：桌面交互输入直连 CLI，绕过 host adapter 的 toolDenylist 注入；用户在一个已归属
-    // 定时任务的会话里继续输入时，CronCreate 仍会被注册。这里在创建入口按 targetTaskId 兜底拒绝。
-    const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) {
-        return { bound: true };
-      }
-      throw new Error(`unexpected method ${method}`);
-    });
-    const port = createProtocolAutomationPort({
-      requestClient,
-      sessions: new Map([
-        [
-          "session-1",
-          {
-            app: {
-              runtime: { getSessionModelSelection: () => undefined },
-              getModel: () => undefined,
-              getMode: () => undefined,
-              getThoughtLevel: () => undefined,
-              setCustomSessionTitle: vi.fn(async () => undefined),
-            },
-            traceContext: { traceId: "trace-session-1" },
-          },
-        ],
-      ]),
-    } as unknown as ZCodeProtocolAgentServerContext);
-
-    await expect(
-      port.create(
-        {
-          cron: "*/5 * * * *",
-          delayMinutes: null,
-          prompt: "再帮我建一个",
-          title: "再帮我建一个",
-        },
-        { sessionId: "session-1" },
-      ),
-    ).rejects.toThrow(AUTOMATION_CREATE_IN_BOUND_SESSION_ERROR);
-    expect(requestClient).toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationCheckTaskBinding,
-      { targetTaskId: "session-1" },
-      expect.anything(),
-    );
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationList,
-      expect.anything(),
-      expect.anything(),
-    );
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationCreate,
-      expect.anything(),
-      expect.anything(),
-    );
-  });
-
   it.each([undefined, "yolo", "guarded"] as const)(
     "普通会话创建 automation 保留显式模式 %s，不迁移未设置值",
     async (mode) => {
       const requestClient = vi.fn(async (method: string) => {
-        if (method === zcodeProtocolMethods.automationCheckTaskBinding) return { bound: false };
         if (method === zcodeProtocolMethods.automationCreate) {
           return {
             automation: {
@@ -181,7 +119,6 @@ describe("createProtocolAutomationPort", () => {
       anchorAt: 1_700_000_000_000,
     };
     const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) return { bound: false };
       if (method === zcodeProtocolMethods.automationCreate) {
         return {
           automation: {
@@ -307,7 +244,6 @@ describe("createProtocolAutomationPort", () => {
 
   it("将当前 Bot turn 的回推目标注入 automation/create，普通模型输入不能自行指定", async () => {
     const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) return { bound: false };
       if (method === zcodeProtocolMethods.automationCreate) {
         return {
           automation: {
@@ -359,28 +295,11 @@ describe("createProtocolAutomationPort", () => {
     );
   });
 
-  it("旧 Host 缺少归属查询方法时回退 automation/list，并允许未绑定会话 CronCreate", async () => {
+  it("已归属定时任务的会话可继续 CronCreate 第二个任务，不再做绑定互斥查询", async () => {
+    // fork 行为回归：每次派发都在任务 workspace 新建对话执行后，会话绑定仅剩归属展示，
+    // 「一个会话只能建一个定时任务」的互斥守卫已删除（见 specs/automation-dispatch-new-conversation.md）。
+    // 防递归仍由 automation 执行轮的 activeAutomationId 守卫负责（见首个测试）。
     const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) {
-        throw new ProtocolRequestError(-32601, "Method not found");
-      }
-      if (method === zcodeProtocolMethods.automationList) {
-        return {
-          automations: [
-            {
-              automationId: "automation-other",
-              title: "其他会话任务",
-              cronExpr: "0 8 * * *",
-              prompt: "提醒其他会话",
-              targetTaskId: "session-other",
-              enabled: true,
-              lifecycleStatus: "active" as const,
-              runCount: 0,
-              recurring: true,
-            },
-          ],
-        };
-      }
       if (method === zcodeProtocolMethods.automationCreate) {
         return {
           automation: {
@@ -408,67 +327,16 @@ describe("createProtocolAutomationPort", () => {
         {
           cron: "*/5 * * * *",
           delayMinutes: null,
-          prompt: "提醒我",
-          title: "每5分钟提醒",
+          prompt: "再帮我建一个",
+          title: "再帮我建一个",
         },
         { sessionId: "session-1" },
       ),
     ).resolves.toEqual(expect.objectContaining({ automationId: "automation-new" }));
-    expect(requestClient).toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationList,
-      {},
-      expect.anything(),
-    );
+    expect(requestClient).toHaveBeenCalledTimes(1);
     expect(requestClient).toHaveBeenCalledWith(
       zcodeProtocolMethods.automationCreate,
       expect.objectContaining({ targetTaskId: "session-1" }),
-      expect.anything(),
-    );
-  });
-
-  it("旧 Host 回退列表命中当前会话绑定时仍拒绝 CronCreate", async () => {
-    const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) {
-        throw new ProtocolRequestError(-32601, "Method not found");
-      }
-      if (method === zcodeProtocolMethods.automationList) {
-        return {
-          automations: [
-            {
-              automationId: "automation-owner",
-              title: "当前会话任务",
-              cronExpr: "*/10 * * * *",
-              prompt: "提醒当前会话",
-              targetTaskId: "session-1",
-              enabled: true,
-              lifecycleStatus: "active" as const,
-              runCount: 0,
-              recurring: true,
-            },
-          ],
-        };
-      }
-      throw new Error(`unexpected method ${method}`);
-    });
-    const port = createProtocolAutomationPort({
-      requestClient,
-      sessions: new Map(),
-    } as unknown as ZCodeProtocolAgentServerContext);
-
-    await expect(
-      port.create(
-        {
-          cron: "*/5 * * * *",
-          delayMinutes: null,
-          prompt: "再建一个任务",
-          title: "再建一个任务",
-        },
-        { sessionId: "session-1" },
-      ),
-    ).rejects.toThrow(AUTOMATION_CREATE_IN_BOUND_SESSION_ERROR);
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationCreate,
-      expect.anything(),
       expect.anything(),
     );
   });
@@ -602,7 +470,6 @@ describe("createProtocolAutomationPort", () => {
 
   it("将 automation/create 上限错误映射为 CLI 稳定领域错误", async () => {
     const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) return { bound: false };
       if (method === zcodeProtocolMethods.automationCreate) {
         throw new Error(
           `[${AUTOMATION_CREATE_LIMIT_ERROR_CODE}] At most 20 automations may be retained.`,
@@ -624,50 +491,6 @@ describe("createProtocolAutomationPort", () => {
 
     expect(error).toBeInstanceOf(AutomationCreateLimitError);
     expect(isAutomationCreateLimitError(error)).toBe(true);
-  });
-
-  it("automation 归属查询失败时 fail-closed，且不调用 automation/create", async () => {
-    const logger = { warn: vi.fn() };
-    const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) {
-        throw new Error("automation storage unavailable");
-      }
-      throw new Error(`unexpected method ${method}`);
-    });
-    const port = createProtocolAutomationPort({
-      logger,
-      requestClient,
-      sessions: new Map(),
-    } as unknown as ZCodeProtocolAgentServerContext);
-
-    await expect(
-      port.create(
-        {
-          cron: "*/5 * * * *",
-          delayMinutes: null,
-          prompt: "提醒我",
-          title: "每5分钟提醒",
-        },
-        { sessionId: "session-unknown" },
-      ),
-    ).rejects.toThrow(AUTOMATION_CREATE_BOUND_SESSION_CHECK_ERROR);
-    expect(logger.warn).toHaveBeenCalledWith(
-      "Failed to check bound automations before CronCreate",
-      expect.objectContaining({
-        event: "automation.create.bound_session_check.failed",
-        sessionId: "session-unknown",
-      }),
-    );
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationList,
-      expect.anything(),
-      expect.anything(),
-    );
-    expect(requestClient).not.toHaveBeenCalledWith(
-      zcodeProtocolMethods.automationCreate,
-      expect.anything(),
-      expect.anything(),
-    );
   });
 
   it("CronCreate 协议请求继承活跃会话的模型、权限和思考等级", async () => {
@@ -748,21 +571,23 @@ describe("createProtocolAutomationPort", () => {
 
   it("Highspeed Turn 中 CronCreate 持久化加速前的会话模型", async () => {
     const requestClient = vi.fn(async (method: string) => {
-      if (method === zcodeProtocolMethods.automationCheckTaskBinding) return { bound: false };
-      return {
-        automation: {
-          automationId: "automation-highspeed",
-          title: "daily report",
-          cronExpr: "0 9 * * *",
-          prompt: "write daily report",
-          model: "builtin:zai/GLM-5",
-          provider: "glm",
-          enabled: true,
-          lifecycleStatus: "active" as const,
-          runCount: 0,
-          recurring: true,
-        },
-      };
+      if (method === zcodeProtocolMethods.automationCreate) {
+        return {
+          automation: {
+            automationId: "automation-highspeed",
+            title: "daily report",
+            cronExpr: "0 9 * * *",
+            prompt: "write daily report",
+            model: "builtin:zai/GLM-5",
+            provider: "glm",
+            enabled: true,
+            lifecycleStatus: "active" as const,
+            runCount: 0,
+            recurring: true,
+          },
+        };
+      }
+      throw new Error(`unexpected method ${method}`);
     });
     // 加速轮的模型只存在于本轮 modelExecution（selectionScope=execution），从不写回
     // Session Selection；所以 CronCreate 读到的 Session Selection 必须仍是加速前的普通选型。

@@ -34,8 +34,6 @@ import {
   zcodeWorkspaceUpdateModelIoPreferencesParamsSchema,
   zcodeWorkspaceUpdateModelIoPreferencesResultSchema,
   zcodeAutomationCreateParamsSchema,
-  zcodeAutomationCheckTaskBindingParamsSchema,
-  zcodeAutomationCheckTaskBindingResultSchema,
   zcodeAutomationUpdateParamsSchema,
   zcodeAutomationProtocolSchema,
 } from "../src/zcode-protocol/index.js";
@@ -676,21 +674,6 @@ describe("ZCode Protocol", () => {
         }),
       ).toThrow();
     }
-  });
-
-  it("validates the dedicated automation task-binding query", () => {
-    expect(
-      zcodeAutomationCheckTaskBindingParamsSchema.parse({ targetTaskId: "session-1" }),
-    ).toEqual({ targetTaskId: "session-1" });
-    expect(zcodeAutomationCheckTaskBindingResultSchema.parse({ bound: true })).toEqual({
-      bound: true,
-    });
-    expect(() =>
-      zcodeAutomationCheckTaskBindingParamsSchema.parse({ targetTaskId: " " }),
-    ).toThrow();
-    expect(() =>
-      zcodeAutomationCheckTaskBindingResultSchema.parse({ bound: false, automations: [] }),
-    ).toThrow();
   });
 
   it("validates a strict non-empty automation update patch", () => {

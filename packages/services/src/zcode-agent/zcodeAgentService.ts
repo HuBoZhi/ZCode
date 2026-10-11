@@ -92,7 +92,6 @@ import {
   zcodePluginsUninstallResultSchema,
   zcodePluginsValidateResultSchema,
   zcodePluginsDescribeResultSchema,
-  zcodeAutomationCheckTaskBindingParamsSchema,
   zcodeAutomationCreateParamsSchema,
   zcodeAutomationDeleteParamsSchema,
   zcodeAutomationListParamsSchema,
@@ -2987,34 +2986,6 @@ export function createZCodeAgentService(
               await client.respond(request.id, {
                 automations: automations.map(toProtocolAutomation),
               });
-            } catch (error) {
-              await client.respondError(request.id, {
-                code: -32603,
-                message: error instanceof Error ? error.message : String(error),
-              });
-            }
-          })();
-          return;
-        }
-
-        if (request.method === zcodeProtocolMethods.automationCheckTaskBinding) {
-          const parsed = zcodeAutomationCheckTaskBindingParamsSchema.safeParse(request.params);
-          if (!parsed.success) {
-            void client.respondError(request.id, {
-              code: -32602,
-              message: "Invalid automation task binding params",
-              data: parsed.error.flatten(),
-            });
-            return;
-          }
-          void (async () => {
-            try {
-              const bound = await automationService.hasTaskBinding({
-                workspacePath: workspace.workspacePath,
-                workspaceIdentity: workspace.workspaceIdentity,
-                targetTaskId: parsed.data.targetTaskId,
-              });
-              await client.respond(request.id, { bound });
             } catch (error) {
               await client.respondError(request.id, {
                 code: -32603,

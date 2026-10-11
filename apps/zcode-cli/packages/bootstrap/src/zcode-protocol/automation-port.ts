@@ -7,7 +7,6 @@ import {
 } from "@zcode/contracts";
 import {
   parseModelPickerValue,
-  zcodeAutomationCheckTaskBindingResultSchema,
   zcodeAutomationCreateResultSchema,
   zcodeAutomationDeleteResultSchema,
   zcodeAutomationListResultSchema,
@@ -15,21 +14,13 @@ import {
   zcodeProtocolMethods,
   type ZCodeAutomationProtocol,
 } from "@zcode/shared";
-import {
-  ProtocolRequestError,
-  type ZCodeProtocolAgentServerContext,
-  type ZCodeProtocolSessionRecord,
+import type {
+  ZCodeProtocolAgentServerContext,
+  ZCodeProtocolSessionRecord,
 } from "./server-types.js";
 
 export const AUTOMATION_CREATE_FROM_AUTOMATION_RUN_ERROR =
   "Cannot create a scheduled task while running a scheduled task.";
-
-export const AUTOMATION_CREATE_IN_BOUND_SESSION_ERROR =
-  "Cannot create a scheduled task inside a session that already belongs to a scheduled task. " +
-  "Ask the user to start a new chat to create another scheduled task.";
-
-export const AUTOMATION_CREATE_BOUND_SESSION_CHECK_ERROR =
-  "Cannot verify whether this session belongs to a scheduled task. Try again later.";
 
 export function createProtocolAutomationPort(
   context: ZCodeProtocolAgentServerContext,
@@ -49,53 +40,10 @@ export function createProtocolAutomationPort(
         // 这个判断发生在 automation-port 内，命中时不会调用 protocol automation/create。
         throw new Error(AUTOMATION_CREATE_FROM_AUTOMATION_RUN_ERROR);
       }
-      // 桌面交互输入直连 CLI（绕过 host adapter 的 toolDenylist 注入），普通用户在
-      // 一个已归属定时任务的会话里继续输入时，CronCreate 仍被注册且没有 per-turn 过滤，会绕过
-      // 前面所有守卫再次创建定时任务。这里在创建入口按 targetTaskId 做与入口路径无关的兜底：
-      // 只要当前会话已经是某个 automation 的绑定会话（= 定时任务会话），就拒绝再次创建；普通会话
-      // 首次创建时还没有绑定，正常放行。归属判断必须走专用 EXISTS 协议，不能读取完整列表；否则
-      // 任意历史任务的展示字段损坏都会让当前会话误报“无法验证”。
-      const ownSessionId = createContext?.sessionId ?? activeSession?.app.sessionId;
-      if (ownSessionId) {
-        let bound: boolean;
-        try {
-          try {
-            const result = await context.requestClient(
-              zcodeProtocolMethods.automationCheckTaskBinding,
-              { targetTaskId: ownSessionId },
-              zcodeAutomationCheckTaskBindingResultSchema,
-            );
-            bound = result.bound;
-          } catch (error) {
-            if (!(error instanceof ProtocolRequestError && error.code === -32601)) {
-              throw error;
-            }
-            // 协议版本仍为 1，新 CLI 连接升级前仍存活或远端的旧 Host 时，专用归属
-            // 方法会返回 -32601。只有“方法不存在”能证明是能力差异，此时回退旧版列表筛选；
-            // 数据库、传输和协议错误仍交给外层 fail-closed，不能误判为未绑定。
-            const legacyResult = await context.requestClient(
-              zcodeProtocolMethods.automationList,
-              {},
-              zcodeAutomationListResultSchema,
-            );
-            bound = legacyResult.automations.some(
-              (automation) => automation.targetTaskId === ownSessionId,
-            );
-          }
-        } catch (error) {
-          context.logger?.warn("Failed to check bound automations before CronCreate", {
-            errorMessage: error instanceof Error ? error.message : String(error),
-            event: "automation.create.bound_session_check.failed",
-            sessionId: ownSessionId,
-          });
-          // 会话归属查询是阻止递归 CronCreate 的授权边界；未知不能等同于未绑定，
-          // 否则 host / 数据库短暂故障会重新开放创建能力。查询失败必须 fail-closed。
-          throw new Error(AUTOMATION_CREATE_BOUND_SESSION_CHECK_ERROR);
-        }
-        if (bound) {
-          throw new Error(AUTOMATION_CREATE_IN_BOUND_SESSION_ERROR);
-        }
-      }
+      // fork 已移除「一个会话只能创建一个定时任务」的守卫：该限制原本保证绑定会话不被
+      // 多个任务交错写入；现在每次派发都在任务 workspace 新建对话执行（见
+      // specs/automation-dispatch-new-conversation.md），会话绑定仅剩创建侧归属展示，
+      // 不再构成执行互斥。防递归仍由上面的 activeAutomationId 执行轮守卫负责。
       // CronCreate 的工具上下文只携带了部分配置，导致权限或思考等级在跨层时丢失。
       // 协议边界按 sessionId 读取活跃 runtime，确保保存的是用户触发工具当下看到的配置。
       // 定时任务只继承会话稳定 Selection：加速卡等单轮执行走 modelExecution

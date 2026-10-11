@@ -375,32 +375,16 @@ Cron mutation tool execution
       -> executor marks current automation turn
       -> CronCreate / CronUpdate / CronDelete handler: reject
       -> CronList handler: allow
-      -> otherwise CronCreate additionally checks bound session
-             -> automation/checkTaskBinding(targetTaskId)
-                    -> workspace-scoped EXISTS query
-                    -> bound: reject
-                    -> unbound: automation/create
-                    -> -32601 Method not found
-                           -> compatibility fallback: automation/list
-                           -> filter targetTaskId in current session
-                           -> bound: reject
-                           -> unbound: automation/create
-                    -> other query failure: reject create only
 ```
 
 - 三种写工具有两层独立 guard：provider 请求先隐藏 `CronCreate` / `CronUpdate` / `CronDelete`；即使
   旧入口或异常 provider 绕过可见性过滤，tool executor 仍把本轮 automation 事实传给 handler，三个
   handler 都必须在调用 `AutomationPort` 前拒绝。`CronList` 是只读查询，automation turn 仍可调用。
-- 普通 turn 的 `CronCreate` 另由 `AutomationPort` 通过专用的
-  `automation/checkTaskBinding` 校验当前 session 是否已绑定任务。Host 只在当前 workspaceKey 内执行
-  `target_task_id` 存在性查询，不读取或序列化完整 automation 列表；因此历史任务的标题、模型、权限
-  模式等展示字段损坏不能再拖垮新版 Host 的归属判断。
-- 新 CLI/bootstrap 连接旧 Host 时，旧 Host 对 `automation/checkTaskBinding` 会明确返回 JSON-RPC
-  `-32601 Method not found`。该错误只表示能力不存在，必须回退到旧 Host 已支持的 `automation/list`，并
-  仅按当前 `targetTaskId` 判断绑定关系；回退列表查询失败仍按未知处理并拒绝创建。除 `-32601` 外的
-  数据库、传输、超时和协议校验错误继续 fail-closed，且不得发送 `automation/create`，避免把真实故障
-  误判为“未绑定”。这与 V4 `sendText` 不查询 task metadata 是不同边界，不能再混写为同一次
-  “归属查询”。
+- fork 已删除「一个会话只能创建一个定时任务」的绑定互斥守卫及配套的
+  `automation/checkTaskBinding` 协议：每次派发都在任务 workspace 新建对话执行后（见
+  `specs/automation-dispatch-new-conversation.md`），会话绑定仅剩创建侧归属展示，不再构成执行
+  互斥；同一会话可以创建多个定时任务。防递归只保留「automation 执行 turn 内拒绝
+  CronCreate/CronUpdate/CronDelete」这一层。
 - automation 仓储读取历史 `mode` 时必须只接受当前支持的权限枚举；空白或未知值按未设置处理，避免
   单条旧数据让 `automation/list` 的整批协议校验失败。创建/更新写入仍由严格类型和协议 schema 拒绝
   非法值，不能继续制造新的脏数据。

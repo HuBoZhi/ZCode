@@ -445,27 +445,6 @@ export class AutomationRepo {
     }
   }
 
-  async hasTaskBinding(scope: {
-    workspacePath: string;
-    workspaceIdentity?: string;
-    targetTaskId: string;
-  }): Promise<boolean> {
-    await this.ensureReady();
-    const workspaceKey = resolveWorkspaceKey(scope);
-    // CronCreate 过去为判断一个 session 的归属而读取并序列化完整列表，任意无关
-    // 展示字段损坏都会让安全查询失败。这里仅查询授权判据本身，并严格限定 workspaceKey。
-    const row = this.getDatabase()
-      .prepare(
-        `SELECT 1 AS bound FROM automations
-        WHERE workspace_key = @workspace_key AND target_task_id = @target_task_id
-        LIMIT 1`,
-      )
-      .get({ workspace_key: workspaceKey, target_task_id: scope.targetTaskId }) as
-      | { bound: number }
-      | undefined;
-    return row !== undefined;
-  }
-
   async get(automationId: string, workspaceKey?: string): Promise<ZCodeAutomation | null> {
     await this.ensureReady();
     const row = this.getRow(automationId, workspaceKey);

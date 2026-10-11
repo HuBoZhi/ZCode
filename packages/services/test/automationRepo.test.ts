@@ -352,38 +352,6 @@ describe("AutomationRepo 调度状态机", () => {
     await expect(repo.get(created.automationId)).resolves.toMatchObject({ mode: "build" });
   });
 
-  it("hasTaskBinding 只在当前 workspaceKey 内按 targetTaskId 查询", async () => {
-    await repo.create(
-      makeParams({
-        workspacePath: "/tmp/ws-a",
-        workspaceIdentity: "remote:ssh:dev:/tmp/ws-a",
-        targetTaskId: "session-1",
-      }),
-      { nextRunAt: NOW + MINUTE },
-    );
-    await repo.create(makeParams({ workspacePath: "/tmp/ws-b", targetTaskId: "session-other" }), {
-      nextRunAt: NOW + MINUTE,
-    });
-
-    await expect(
-      repo.hasTaskBinding({
-        workspacePath: "/tmp/ws-a",
-        workspaceIdentity: "remote:ssh:dev:/tmp/ws-a",
-        targetTaskId: "session-1",
-      }),
-    ).resolves.toBe(true);
-    await expect(
-      repo.hasTaskBinding({
-        workspacePath: "/tmp/ws-a",
-        workspaceIdentity: "remote:ssh:other:/tmp/ws-a",
-        targetTaskId: "session-1",
-      }),
-    ).resolves.toBe(false);
-    await expect(
-      repo.hasTaskBinding({ workspacePath: "/tmp/ws-b", targetTaskId: "session-1" }),
-    ).resolves.toBe(false);
-  });
-
   it("create：所有生命周期状态合计达到 20 条后拒绝创建，删除后释放名额", async () => {
     const statuses: ZCodeAutomationLifecycleStatus[] = ["active", "paused", "completed", "failed"];
     for (let index = 0; index < AUTOMATION_CREATE_LIMIT; index += 1) {
