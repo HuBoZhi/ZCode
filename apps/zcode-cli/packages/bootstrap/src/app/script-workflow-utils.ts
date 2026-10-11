@@ -1,11 +1,13 @@
 import type {
-import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
   ScriptWorkflowRunStats,
   ScriptWorkflowStorePort,
   SessionId,
   SessionStorePort,
   WorkflowAgentCallInput,
 } from "@zcode/contracts";
+// 修复：59044c0f 迁移时该 import 被错插进 import type 块内部导致语法错误，
+// 移到类型导入之后，恢复 bootstrap 包可编译。
+import { ZCODE_DATA_DIR_NAME } from "@zcode/shared";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 
