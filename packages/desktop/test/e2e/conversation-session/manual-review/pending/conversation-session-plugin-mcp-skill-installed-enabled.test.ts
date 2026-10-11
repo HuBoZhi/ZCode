@@ -3,7 +3,7 @@
 // 1) 把 plugin MCP 工具注册到模型请求 tools 数组；
 // 2) 允许模型在真实对话轮次里调它；
 // 3) chat 出现对应 tool-call block。
-// wdio 启动前已在 <E2E_HOME>/.zcode/cli/plugins/installed_plugins.json 写入带 installPath
+// wdio 启动前已在 <E2E_HOME>/.zetacode/cli/plugins/installed_plugins.json 写入带 installPath
 // 的记录，并把 config.json#plugins.enabledPlugins[id] 显式置为 true。
 // （安装型 plugin 的 defaultEnabled=false，所以必须显式打开才能让
 // NodePluginAdapter.resolveEnabled 返回 true。）
@@ -58,12 +58,9 @@ describe("会话区 插件 MCP Skill 生命周期 E2E / 已安装并启用", () 
     expect(requestRecord).not.toBeNull();
     if (!requestRecord) return;
     // 强证据：模型请求的 tools 数组里必须有 plugin MCP 工具。
-    expect(
-      captureArtifactAdvertisesToolName(
-        requestRecord.requestJson,
-        PLUGIN_MCP_TOOL_NAME,
-      ),
-    ).toBe(true);
+    expect(captureArtifactAdvertisesToolName(requestRecord.requestJson, PLUGIN_MCP_TOOL_NAME)).toBe(
+      true,
+    );
 
     // 等 chat 出现 tool-call block；轮询时主动清掉会拦截的弹窗。
     let block = await getToolCallBlockByToolName(PLUGIN_MCP_TOOL_NAME);

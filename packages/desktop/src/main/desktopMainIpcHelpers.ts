@@ -15,7 +15,16 @@ export async function openFileUrlInDefaultApp(
   logger: DesktopIpcLogger,
 ): Promise<void> {
   try {
-    const filePath = fileURLToPath(url);
+    const parsed = new URL(url);
+    // Node 的 fileURLToPath 对带 fragment 的 file URL 抛 ERR_INVALID_FILE_URL_PATH；
+    // HTML 锚点链接（doc.html#section）应剥掉 hash 后打开文件本身。
+    // host 非空的 file://server/... 在 Windows 会被当 UNC 打开，语义不明确且
+    // 跨平台行为不一致，统一视为不可转换并记录 warn，不回退到 shell.openExternal。
+    if (parsed.host && parsed.host !== "localhost") {
+      throw new Error(`unsupported file URL host: ${parsed.host}`);
+    }
+    parsed.hash = "";
+    const filePath = fileURLToPath(parsed);
     await openPathInDefaultApp(filePath, logger);
   } catch (error) {
     logger.warn("[open-external] file URL 打开失败", {

@@ -70,6 +70,9 @@ it("替换期间并发读取只见完整旧版或新版，不产生 hash 历史�
       const fileContent = JSON.parse(await readFile(file, "utf8"));
       expect([1, 2]).toContain(fileContent.revision);
       expect(fileContent).toEqual(JSON.parse(release(fileContent.revision)));
+      // Windows 上 rename 覆盖正被读取的目标文件会 EPERM；紧密轮询会让 writer
+      // 在重试窗口内拿不到独占窗口。完整性断言不依赖无间隔轮询，让出调度即可。
+      await new Promise((resolve) => setTimeout(resolve, 5));
     } while (!finished);
   })();
   await Promise.all([writer, reader]);

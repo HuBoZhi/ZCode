@@ -124,7 +124,7 @@ async function seedBuiltinUserState(): Promise<void> {
 }
 
 async function builtinOptionsExist(): Promise<boolean> {
-  const configPath = join(getE2EAppDataPaths().homeDir, ".zcode", "cli", "config.json");
+  const configPath = join(getE2EAppDataPaths().homeDir, ".zetacode", "cli", "config.json");
   const config = JSON.parse(await readFile(configPath, "utf-8")) as Record<string, unknown>;
   const plugins = isRecord(config.plugins) ? config.plugins : {};
   const options = isRecord(plugins.options) ? plugins.options : {};

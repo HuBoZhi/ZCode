@@ -263,7 +263,7 @@ async function waitForProviderRequests(input: {
 }
 
 async function readModelIoRecords(): Promise<Array<{ line: string; record: ModelIoRecord }>> {
-  // 统一从 E2E path helper 读取历史 .zcode 根，避免测试与 runner 的 HOME 发生漂移。
+  // 统一从 E2E path helper 读取历史 .zetacode 根，避免测试与 runner 的 HOME 发生漂移。
   const debugDir = join(paths.storageRoot, "cli", "debug");
   const files = await readdir(debugDir).catch(() => []);
   const records: Array<{ line: string; record: ModelIoRecord }> = [];

@@ -37,8 +37,8 @@ const E2E_HOME_DIR =
   // 导致 provider 诊断和清理读写开发者本机配置，而不是当前 e2e sandbox。
   DEFAULT_E2E_HOME_DIR;
 // Bug 根因：storage profile 回滚删除了该共享根字段，但多个 E2E 仍需定位 CLI 数据。
-// 隔离由测试 HOME 保证，目录名保持生产历史语义 .zcode。
-const E2E_STORAGE_ROOT = join(E2E_HOME_DIR, ".zcode");
+// 隔离由测试 HOME 保证；CLI 数据根与品牌数据根 .zetacode 保持一致（specs/fork-data-root-isolation.md）。
+const E2E_STORAGE_ROOT = join(E2E_HOME_DIR, ".zetacode");
 const E2E_APP_DATA_DIR = join(E2E_STORAGE_ROOT, "v2");
 export const DEFAULT_WORKSPACE = join(E2E_HOME_DIR, "ZCodeProject");
 export const DEFAULT_CONVERSATION_WORKSPACE = join(E2E_STORAGE_ROOT, "workspace", "default");
@@ -882,7 +882,7 @@ export async function snapshotCliConfig(): Promise<CliConfigSnapshot> {
 }
 
 export async function restoreCliConfig(snapshot: CliConfigSnapshot): Promise<void> {
-  // 修复原因：seedCliConfig 写的是隔离 HOME 下的 CLI 全局配置；只清 ~/.zcode/v2
+  // 修复原因：seedCliConfig 写的是隔离 HOME 下的 CLI 全局配置；只清 ~/.zetacode/v2
   // 会让 WebFetch 临时代理留到同一 E2E session 后续步骤，必须恢复文件级快照。
   if (snapshot.content === null) {
     await rm(CLI_CONFIG_FILE, { force: true });
@@ -949,7 +949,7 @@ export function probeWorkspaceAppState(
     (element) => element.dataset.testid === params.workspaceItemTestId,
   );
   const conversationWorkspaceReady =
-    params.expectedPath.replace(/\\/g, "/").endsWith("/.zcode/workspace/default") &&
+    params.expectedPath.replace(/\\/g, "/").endsWith("/.zetacode/workspace/default") &&
     Boolean(document.querySelector(`[data-testid="${params.composerWorkspaceTriggerTestId}"]`));
   // v4 硬切后聊天区是 v4 session pane（testid 带 paneId 后缀，用前缀匹配）。
   return (workspaceItem || conversationWorkspaceReady) &&

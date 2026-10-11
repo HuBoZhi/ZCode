@@ -3,7 +3,6 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 
 const roots: string[] = [];
@@ -33,9 +32,9 @@ it.each([false, true])(
     });
   `,
     );
-    const proxy = fileURLToPath(
-      new URL("./e2e/helpers/subagent-config-proxy.mjs", import.meta.url),
-    );
+    // Node 24 的 --import 只接受合法 ESM 说明符；Windows 绝对路径会被当成
+    // 'g:' 协议 URL 拒载（ERR_UNSUPPORTED_ESM_URL_SCHEME）。保留 file:// URL。
+    const proxy = new URL("./e2e/helpers/subagent-config-proxy.mjs", import.meta.url).href;
     const child = spawn(process.execPath, [entry, "app-server", "--stdio"], {
       env: {
         ...process.env,

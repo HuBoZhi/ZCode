@@ -61,7 +61,7 @@ describe("PLM-LC-007b Desktop real official CDN ZIP smoke", () => {
     expect(existsSync(join(cacheRoot, ".claude-plugin", "plugin.json"))).toBe(true);
     const installedState = JSON.parse(
       readFileSync(
-        join(getE2EAppDataPaths().homeDir, ".zcode", "cli", "plugins", "installed_plugins.json"),
+        join(getE2EAppDataPaths().homeDir, ".zetacode", "cli", "plugins", "installed_plugins.json"),
         "utf-8",
       ),
     ) as {

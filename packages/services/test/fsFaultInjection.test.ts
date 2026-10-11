@@ -12,7 +12,7 @@ describe("fsFaultInjection", () => {
         code: "ENOSPC",
         id: "D01-session-history-enospc",
         operations: ["writeFile"],
-        pathIncludes: "\\.zcode\\",
+        pathIncludes: "\\.zetacode\\",
       },
     ]);
 

@@ -47,15 +47,15 @@ const PROMPT_MARKER = "E2E_MCP_OAUTH_STATUS_ISOLATION";
 const DIRECT_RESULT = `E2E_MCP_DIRECT_PONG:${PROMPT_MARKER}`;
 const PLAIN_HTTP_RESULT = `E2E_MCP_HTTP_PONG:${PROMPT_MARKER}`;
 const E2E_PATHS = getE2EAppDataPaths();
-const CLI_CONFIG_FILE = join(E2E_PATHS.homeDir, ".zcode", "cli", "config.json");
+const CLI_CONFIG_FILE = join(E2E_PATHS.homeDir, ".zetacode", "cli", "config.json");
 const INSTALLED_PLUGINS_FILE = join(
   E2E_PATHS.homeDir,
-  ".zcode",
+  ".zetacode",
   "cli",
   "plugins",
   "installed_plugins.json",
 );
-const PLUGIN_ROOT = join(E2E_PATHS.homeDir, ".zcode", "cli", "e2e-fixtures", PLUGIN_NAME);
+const PLUGIN_ROOT = join(E2E_PATHS.homeDir, ".zetacode", "cli", "e2e-fixtures", PLUGIN_NAME);
 const PLUGIN_MANIFEST_FILE = join(PLUGIN_ROOT, ".zcode-plugin", "plugin.json");
 const CASE_ROOT = join(E2E_PATHS.workspace, "mcp-oauth-status-isolation-e2e");
 const DIRECT_MCP_CALL_LOG = join(CASE_ROOT, "direct-mcp-calls.ndjson");
@@ -196,12 +196,7 @@ describe("会话区 MCP OAuth 状态刷新隔离 E2E", () => {
     await waitForUpstreamRequest(
       {
         excludes: ["Generate a concise title", "CRITICAL: Respond with TEXT ONLY"],
-        includes: [
-          PROMPT_MARKER,
-          DIRECT_RESULT,
-          PLAIN_HTTP_MCP_TOOL_NAME,
-          PLAIN_HTTP_RESULT,
-        ],
+        includes: [PROMPT_MARKER, DIRECT_RESULT, PLAIN_HTTP_MCP_TOOL_NAME, PLAIN_HTTP_RESULT],
       },
       "普通 HTTP MCP tool_result 没有进入 provider continuation",
       60_000,
@@ -323,7 +318,7 @@ async function writeMcpFixtures(mcpUrl: string, plainHttpMcpUrl: string): Promis
   await mkdir(CASE_ROOT, { recursive: true });
   await rm(DIRECT_MCP_CALL_LOG, { force: true });
   await mkdir(join(PLUGIN_ROOT, ".zcode-plugin"), { recursive: true });
-  await mkdir(join(E2E_PATHS.homeDir, ".zcode", "cli", "plugins"), {
+  await mkdir(join(E2E_PATHS.homeDir, ".zetacode", "cli", "plugins"), {
     recursive: true,
   });
 

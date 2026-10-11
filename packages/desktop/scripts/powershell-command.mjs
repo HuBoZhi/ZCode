@@ -19,13 +19,19 @@ export function createEncodedPowerShellArgs(script, values = []) {
   // Windows PowerShell 5.1 会把普通 `-Command` 后续 argv 拼回命令文本，
   // 不会把它们注入 `$args`。动态值先单独编码，再放进 `-EncodedCommand`，同时避免
   // Program Files 空格、引号或分号被 PowerShell 二次解析成脚本内容。
+  // [Console]::Out 默认跟随 OEM 代码页（中文系统为 GBK），stdout 里出现中文时
+  // Node 按 UTF-8 解码必然乱码；先显式切到 UTF-8 再执行脚本。
+  const outputEncodingUtf8 = "try{[Console]::OutputEncoding=[Text.Encoding]::UTF8}catch{};";
   const valueBindings = values
     .map(
       (value, index) =>
         `$zcodeArg${index}=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encodeUtf8Value(value)}'));`,
     )
     .join("");
-  const encodedCommand = Buffer.from(`${valueBindings}${script}`, "utf16le").toString("base64");
+  const encodedCommand = Buffer.from(
+    `${outputEncodingUtf8}${valueBindings}${script}`,
+    "utf16le",
+  ).toString("base64");
   return [...POWERSHELL_COMMON_ARGS, "-EncodedCommand", encodedCommand];
 }
 

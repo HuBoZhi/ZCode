@@ -217,7 +217,7 @@ describe("已保存工作流中枢 E2E", () => {
 
 // ── 全局工作流：置顶「全局」组 + 全局→项目搬文件 + 项目→全局 AI 概括（docs/dynamic-workflow/launch.md）──
 // E2E_HOME_DIR 由 wdio 配置设为隔离目录并写进 HOME（wdio.conf.ts:520），app / agent 进程都继承它，
-// 因此 agent 的 os.homedir() 解析到这里，全局根 = `<E2E_HOME>/.zcode/workflows/`。
+// 因此 agent 的 os.homedir() 解析到这里，全局根 = `<E2E_HOME>/.zetacode/workflows/`。
 const E2E_HOME = dirname(DEFAULT_WORKSPACE);
 const GLOBAL_WORKFLOW_NAME = "global-note";
 const GLOBAL_WORKFLOWS_DIR = join(E2E_HOME, ZCODE_DATA_DIR_NAME, "workflows");
@@ -766,20 +766,23 @@ describe("直接启动 E2E", () => {
     //     长出一条 running 的运行行；sleep 脚本没有 phase() 标记，所以轨道是一个隐含站点。
     await browser.waitUntil(
       async () =>
-        browser.execute((prefix) => {
-          const rows = Array.from(
-            document.querySelectorAll<HTMLElement>(`[data-testid^="${prefix}"]`),
-          );
-          return rows.some((row) => {
-            const line = row.querySelector<HTMLElement>(
-              '[data-workflow-run-line][data-run-status="running"]',
+        browser.execute(
+          (prefix) => {
+            const rows = Array.from(
+              document.querySelectorAll<HTMLElement>(`[data-testid^="${prefix}"]`),
             );
-            return (
-              line !== null &&
-              line.querySelector('[data-workflow-run-rail][data-implicit="true"]') !== null
-            );
-          });
-        }, testId(TID_TASK_ITEM, "")),
+            return rows.some((row) => {
+              const line = row.querySelector<HTMLElement>(
+                '[data-workflow-run-line][data-run-status="running"]',
+              );
+              return (
+                line !== null &&
+                line.querySelector('[data-workflow-run-rail][data-implicit="true"]') !== null
+              );
+            });
+          },
+          testId(TID_TASK_ITEM, ""),
+        ),
       { timeout: 60000, timeoutMsg: "侧栏里发起工作流的会话行没有长出 running 的运行行" },
     );
 

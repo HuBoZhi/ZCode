@@ -103,7 +103,7 @@ function seedHistory(
 }
 
 function appUsageDatabasePath(e2eHomeDir: string): string {
-  return join(e2eHomeDir, ".zcode", "cli", "db", "db.sqlite");
+  return join(e2eHomeDir, ".zetacode", "cli", "db", "db.sqlite");
 }
 
 function insertUsage(

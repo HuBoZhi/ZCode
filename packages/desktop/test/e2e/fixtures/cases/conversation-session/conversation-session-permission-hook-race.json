@@ -15,7 +15,7 @@
     {
       "path": ".zcode/permission-hook-race-blocker.mjs",
       "source": "created-by-helper",
-      "description": "阻塞型 PermissionRequest hook 脚本：记录 started 后睡眠 120s、不产出决定；由 user config（隔离 E2E HOME 的 .zcode/cli/config.json）以绝对路径引用。"
+      "description": "阻塞型 PermissionRequest hook 脚本：记录 started 后睡眠 120s、不产出决定；由 user config（隔离 E2E HOME 的 .zetacode/cli/config.json）以绝对路径引用。"
     },
     {
       "path": ".zcode/permission-hook-race-trace.jsonl",

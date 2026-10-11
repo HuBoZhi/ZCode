@@ -1,4 +1,4 @@
-Unicode true
+﻿Unicode true
 Name "ZCode installer.nsh smoke"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$TEMP\zcode-installer-nsh-smoke"

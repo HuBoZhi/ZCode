@@ -1,3 +1,6 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformChannels } from "@zcode/shared";
 
@@ -139,7 +142,10 @@ describe("OpenExternal 对 file URL 的分流", () => {
     const { listener } = await registerOpenExternalListener();
     const sender = { getURL: vi.fn(() => "about:blank") };
 
-    listener({ sender }, "file:///tmp/report.html#section");
+    // /tmp 形式的 file URL 在 Windows 上没有盘符，fileURLToPath 会拒绝；
+    // 用真实临时目录构造跨平台的文件 URL，用例只验证 hash 剥离本身。
+    const reportUrl = `${pathToFileURL(join(tmpdir(), "report.html"))}#section`;
+    listener({ sender }, reportUrl);
 
     await vi.waitFor(() => expect(h.shellOpenPath).toHaveBeenCalledTimes(1));
     expect(h.shellOpenPath).not.toHaveBeenCalledWith(expect.stringContaining("#"));

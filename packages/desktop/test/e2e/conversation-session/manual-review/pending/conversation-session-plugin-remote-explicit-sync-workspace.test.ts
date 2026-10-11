@@ -226,7 +226,7 @@ async function seedRemoteWorkspace(
   };
   const command = [
     "set -eu",
-    `rm -rf -- /root/.zcode ${quoteShell(workspacePath)}`,
+    `rm -rf -- /root/.zetacode ${quoteShell(workspacePath)}`,
     `mkdir -p -- ${quoteShell(posix.join(workspacePath, ".zcode"))}`,
     writeBase64Command(
       posix.join(workspacePath, ".zcode", "config.json"),
@@ -255,11 +255,11 @@ async function readRemotePluginStorageState(target: SSHConnectionConfig): Promis
 }> {
   const command = [
     "installed=false",
-    `if test -f "$HOME/.zcode/cli/plugins/installed_plugins.json" && grep -Fq -- ${quoteShell(PLUGIN_LIFECYCLE_ID)} "$HOME/.zcode/cli/plugins/installed_plugins.json"; then installed=true; fi`,
+    `if test -f "$HOME/.zetacode/cli/plugins/installed_plugins.json" && grep -Fq -- ${quoteShell(PLUGIN_LIFECYCLE_ID)} "$HOME/.zetacode/cli/plugins/installed_plugins.json"; then installed=true; fi`,
     "cached=false",
-    `if test -d "$HOME/.zcode/cli/plugins/cache" && find "$HOME/.zcode/cli/plugins/cache" -path ${quoteShell(`*${PLUGIN_LIFECYCLE_NAME}*`)} -print -quit | grep -q .; then cached=true; fi`,
+    `if test -d "$HOME/.zetacode/cli/plugins/cache" && find "$HOME/.zetacode/cli/plugins/cache" -path ${quoteShell(`*${PLUGIN_LIFECYCLE_NAME}*`)} -print -quit | grep -q .; then cached=true; fi`,
     "marketplace=false",
-    `if test -f "$HOME/.zcode/cli/plugins/known_marketplaces.json" && grep -Fq -- ${quoteShell(PLUGIN_LIFECYCLE_MARKETPLACE_ID)} "$HOME/.zcode/cli/plugins/known_marketplaces.json"; then marketplace=true; fi`,
+    `if test -f "$HOME/.zetacode/cli/plugins/known_marketplaces.json" && grep -Fq -- ${quoteShell(PLUGIN_LIFECYCLE_MARKETPLACE_ID)} "$HOME/.zetacode/cli/plugins/known_marketplaces.json"; then marketplace=true; fi`,
     "printf '%s\\n' \"$installed $cached $marketplace\"",
   ].join("; ");
   const result = await runSSHCommand(target, command);

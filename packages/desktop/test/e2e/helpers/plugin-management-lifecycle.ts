@@ -403,9 +403,11 @@ export async function waitForDisplayedPluginControl(
 export async function addMarketplaceSourceThroughUi(source: string): Promise<void> {
   await waitForPluginControl("plugin-store-create");
   await browser.execute(() => {
-    document.querySelector<HTMLElement>('[data-testid="plugin-store-create"]')?.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" }),
-    );
+    document
+      .querySelector<HTMLElement>('[data-testid="plugin-store-create"]')
+      ?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" }),
+      );
   });
   await waitForPluginControl("plugin-store-add-source-menu-item");
   await clickPluginControl("plugin-store-add-source-menu-item");
@@ -884,7 +886,7 @@ export async function waitForPluginDraftRuntimeInvalidation(
 
 export async function readPluginConfigOptions(): Promise<Record<string, unknown>> {
   const config = await readJsonRecord(
-    join(getE2EAppDataPaths().homeDir, ".zcode", "cli", "config.json"),
+    join(getE2EAppDataPaths().homeDir, ".zetacode", "cli", "config.json"),
   );
   const plugins = isRecord(config.plugins) ? config.plugins : {};
   const options = isRecord(plugins.options) ? plugins.options : {};
@@ -892,7 +894,7 @@ export async function readPluginConfigOptions(): Promise<Record<string, unknown>
 }
 
 export function pluginStoragePath(...segments: string[]): string {
-  return join(getE2EAppDataPaths().homeDir, ".zcode", "cli", "plugins", ...segments);
+  return join(getE2EAppDataPaths().homeDir, ".zetacode", "cli", "plugins", ...segments);
 }
 
 export function pluginDataPath(pluginId: string): string {
