@@ -1,0 +1,42 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- ZetaCode 品牌渐变：深墨青 → 青绿，与官方近黑 Z 形成强色相差异（小尺寸可辨）。
+         方向 150°：左上最暗、右下最亮，给 ζ 的尾钩留出高光位。 -->
+    <linearGradient id="bg" x1="12%" y1="6%" x2="88%" y2="96%">
+      <stop offset="0%" stop-color="#04252B"/>
+      <stop offset="45%" stop-color="#07454B"/>
+      <stop offset="100%" stop-color="#0E7C74"/>
+    </linearGradient>
+    <!-- 字形微渐变：纯白顶部 → 冷青白底部，压住大面积白的呆板感。 -->
+    <linearGradient id="glyph" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D9FBF4"/>
+    </linearGradient>
+    <!-- squircle 顶部内高光，1.5px 视觉等价。 -->
+    <linearGradient id="rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="18%" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 底板 squircle（约 18% 圆角） -->
+  <rect x="0" y="0" width="1024" height="1024" rx="185" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="185" fill="url(#rim)"/>
+
+  <!-- ζ（zeta）：两段式断裂 stroke，断口斜切 —— 断裂切分承自官方 Z 的家族签名，
+       表达「同源的 fork」；ζ 骨架 = 顶横杠 + 大弧下行 + 右出底尾。 -->
+  <g fill="none" stroke="url(#glyph)" stroke-width="118" stroke-linecap="butt">
+    <!-- 上段：顶横杠（左→右）+ 右端一笔滑出向左下的回勾弧（止于断口）。
+         第一控制点放在横杠右端右上方，让弧线以接近水平的切线滑出再弯下，避免直角转折。 -->
+    <path d="M 302 296 H 698
+             C 764 330 692 436 596 504
+             C 508 566 434 612 388 652"/>
+    <!-- 下段：底弯 + 尾钩向右扫出，尾端仅微上挑。 -->
+    <path d="M 412 728
+             C 488 768 624 762 734 698"/>
+  </g>
+
+  <!-- 断口斜切强调线：背景色细楔形，把两段间的空隙切成科技感斜缝而非平行开口。 -->
+  <path d="M 382 608 L 452 690 L 424 730 L 350 646 Z" fill="#053037" opacity="0.92"/>
+</svg>
